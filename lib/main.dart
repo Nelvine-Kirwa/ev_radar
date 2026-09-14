@@ -1,6 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 
-void main() {
+import 'firebase_options.dart';
+import 'providers/vehicle_provider.dart';
+import 'providers/charging_provider.dart';
+import 'providers/trip_provider.dart';
+import 'screens/splash_screen.dart';
+import 'utils/constants.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await dotenv.load(fileName: '.env');
+
   runApp(const EVRadarApp());
 }
 
@@ -9,38 +27,20 @@ class EVRadarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'EV Radar',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C853)),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        backgroundColor: Color(0xFF0A0E1A),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.electric_car, size: 100, color: Color(0xFF00C853)),
-              SizedBox(height: 20),
-              Text(
-                'EV RADAR',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 4,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Smart EV Tracking & Charging',
-                style: TextStyle(color: Color(0xFF8892B0), fontSize: 14),
-              ),
-            ],
-          ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(create: (_) => ChargingProvider()),
+        ChangeNotifierProvider(create: (_) => TripProvider()),
+      ],
+      child: MaterialApp(
+        title: AppStrings.appName,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+          useMaterial3: true,
         ),
+        home: const SplashScreen(),
       ),
     );
   }
