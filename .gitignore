@@ -33,3 +33,6 @@ Thumbs.db
 hs_err_pid*.log
 replay_pid*.log
 *.hprof
+
+# Kotlin errors
+android/.kotlin/
