@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../utils/constants.dart';
-import 'auth/login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -80,14 +79,7 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 32),
               TextButton(
                 onPressed: () async {
-                  final auth = context.read<AuthProvider>();
-                  final navigator = Navigator.of(context);
-                  await auth.signOut();
-                  navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(
-                        builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
+                  await context.read<AuthProvider>().signOut();
                 },
                 child: const Text(
                   'Sign Out',

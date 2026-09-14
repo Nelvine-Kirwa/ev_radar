@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/constants.dart';
 import '../home_screen.dart';
 import 'widgets/auth_text_field.dart';
@@ -21,7 +23,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _isLoading = false;
   bool _acceptTerms = false;
 
   @override
@@ -36,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -46,20 +48,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
+    final auth = context.read<AuthProvider>();
+    final success = await auth.signUp(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } else {
+      final message = auth.error ?? 'Signup failed. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.danger,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
       appBar: AppBar(
@@ -210,7 +227,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     AuthButton(
                       label: 'CREATE ACCOUNT',
                       icon: Icons.person_add,
-                      isLoading: _isLoading,
+                      isLoading: auth.isLoading,
                       onPressed: _register,
                     ),
                   ],
@@ -237,6 +254,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

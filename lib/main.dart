@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
 import 'providers/vehicle_provider.dart';
 import 'providers/charging_provider.dart';
 import 'providers/trip_provider.dart';
@@ -29,6 +30,7 @@ class EVRadarApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => ChargingProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
