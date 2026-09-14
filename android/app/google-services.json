@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:764596656844:android:48a38bfd7bbed961c24069",
+        "mobilesdk_app_id": "1:764596656844:android:a026dbdd6dc101b6c24069",
         "android_client_info": {
-          "package_name": "com.example.ev_radar"
+          "package_name": "com.ev.radar"
         }
       },
       "oauth_client": [],

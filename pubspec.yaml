@@ -1,4 +1,4 @@
-﻿name: ev_radar
+name: ev_radar
 description: EV Radar - Smart Electric Vehicle Tracking and Charging Recommendations
 publish_to: 'none'
 version: 1.0.0+1
@@ -12,7 +12,7 @@ dependencies:
 
   # Location & GPS
   geolocator: 10.1.1
-  geocoding: ^3.0.0
+  geocoding: ^4.0.0
 
   # Maps
   google_maps_flutter: 2.5.3
@@ -54,7 +54,4 @@ flutter:
   assets:
     - .env
     - assets/images/
-
-dependency_overrides:
-  geocoding_android: ^3.0.0
 
