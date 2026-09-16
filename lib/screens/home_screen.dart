@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../utils/constants.dart';
+import 'profile_support_screen.dart';
 import 'auth/login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -25,6 +26,22 @@ class HomeScreen extends StatelessWidget {
             letterSpacing: 2,
           ),
         ),
+      
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: Colors.white),
+            tooltip: 'Profile & Support',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileSupportScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

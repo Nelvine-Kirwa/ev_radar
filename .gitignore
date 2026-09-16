@@ -36,3 +36,11 @@ replay_pid*.log
 
 # Kotlin errors
 android/.kotlin/
+
+# Firebase service account key (SECRET - do not commit)
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
+# Local seeding scripts (contains token-adjacent tooling)
+scripts/
+stations.json
