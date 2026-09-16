@@ -20,8 +20,24 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChargingProvider>().loadStationById(widget.stationId);
+      _loadWithRetry();
     });
+  }
+
+  Future<void> _loadWithRetry() async {
+    final provider = context.read<ChargingProvider>();
+    await provider.loadStationById(widget.stationId);
+
+    // If the first attempt failed (transient error or rules propagation),
+    // retry once after a short delay.
+    if (mounted &&
+        provider.currentStation == null &&
+        provider.error != null) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        await provider.loadStationById(widget.stationId);
+      }
+    }
   }
 
   Future<void> _launchPhone(String phone) async {
@@ -47,11 +63,28 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
-      body: provider.isLoading
+      body: Stack(
+        children: [
+          provider.isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C853)))
           : provider.error != null || station == null
               ? _buildError(provider.error ?? 'Station not found')
               : _buildContent(station),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _circleButton(
+                  icon: Icons.arrow_back,
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: const DarkBottomNav(currentIndex: 1),
     );
   }
@@ -94,6 +127,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildActionRow(s),
+                const SizedBox(height: 16),
                 _buildQuickFacts(s),
                 const SizedBox(height: 16),
                 _buildPorts(s),
@@ -113,11 +148,19 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
   Widget _buildHero(ChargingStation s) {
     return SizedBox(
-      height: 260,
+      height: 360,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(s.chargerImage, fit: BoxFit.cover),
+          Container(color: const Color(0xFF0A0E1A)),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 80),
+            child: Image.asset(
+              s.chargerImage,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -132,32 +175,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               ),
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _circleButton(
-                    icon: Icons.arrow_back,
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  Row(
-                    children: [
-                      _circleButton(
-                        icon: _saved
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        onTap: () => setState(() => _saved = !_saved),
-                      ),
-                      const SizedBox(width: 8),
-                      _circleButton(icon: Icons.share_outlined, onTap: () {}),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+
           Positioned(
             left: 16,
             right: 16,
@@ -165,8 +183,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _statusPill(s.statusLabel, s.statusTier),
-                const SizedBox(height: 10),
                 Text(
                   s.name,
                   style: const TextStyle(
@@ -197,6 +213,21 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionRow(ChargingStation s) {
+    return Row(
+      children: [
+        _statusPill(s.statusLabel, s.statusTier),
+        const Spacer(),
+        _circleButton(
+          icon: _saved ? Icons.bookmark : Icons.bookmark_border,
+          onTap: () => setState(() => _saved = !_saved),
+        ),
+        const SizedBox(width: 8),
+        _circleButton(icon: Icons.share_outlined, onTap: () {}),
+      ],
     );
   }
 
@@ -267,7 +298,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            _quickFact('DISTANCE', '— km'),
+            _quickFact('DISTANCE', '- km'),
             const VerticalDivider(color: Color(0xFF1F2937), width: 1),
             _quickFact('PRICE', 'KSh ${s.pricePerKwhKsh}\n/ kWh',
                 valueColor: const Color(0xFF00C853)),
@@ -373,14 +404,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Port $number • $connectorType',
+                Text('Port $number - $connectorType',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(
-                  available ? 'AC Fast • 22 kW' : 'In Use',
+                  available ? 'AC Fast - 22 kW' : 'In Use',
                   style: const TextStyle(
                       color: Color(0xFF8892B0), fontSize: 11),
                 ),
@@ -436,7 +467,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 3,
-            childAspectRatio: 1.4,
+            childAspectRatio: 1.5,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
             children: displayAmenities.map((a) {
