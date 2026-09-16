@@ -55,4 +55,5 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/chargers/
 
