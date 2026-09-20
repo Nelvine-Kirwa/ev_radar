@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Sign in to continue driving smart',
+                'Sign in to EV Radar',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF8892B0), fontSize: 13),
               ),

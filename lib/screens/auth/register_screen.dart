@@ -108,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Join EV Radar and start smart driving',
+                'Join EV Radar and enjoy smart driving',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF8892B0), fontSize: 13),
               ),

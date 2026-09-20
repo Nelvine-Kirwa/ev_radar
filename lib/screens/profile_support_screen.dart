@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
+import '../providers/auth_provider.dart';
+import 'auth/login_screen.dart';
 import '../widgets/glass/glass_scaffold.dart';
 import '../widgets/glass/glass_card.dart';
 import '../widgets/glass/glass_button.dart';
@@ -74,14 +77,34 @@ class ProfileSupportScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined,
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.settings_outlined,
                 color: GlassColors.textPrimary),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune, color: GlassColors.textPrimary),
-            onPressed: () {},
+            onSelected: (value) async {
+              if (value == 'signout') {
+                final auth = context.read<AuthProvider>();
+                final navigator = Navigator.of(context);
+                await auth.signOut();
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(
+                      builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'signout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: Color(0xFFD32F2F)),
+                    SizedBox(width: 10),
+                    Text('Sign Out',
+                        style: TextStyle(color: Color(0xFFD32F2F))),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
         ],

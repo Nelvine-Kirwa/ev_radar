@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
-import '../widgets/dark_bottom_nav.dart';
+import '../widgets/app_top_bar.dart';
 import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
 import '../widgets/radar_overlay.dart';
@@ -43,211 +43,124 @@ class _StationsScreenState extends State<StationsScreen> {
     final provider = context.watch<ChargingProvider>();
     final stations = provider.visibleStations;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                _buildTopBar(),
-                _buildSearchBar(),
-                const SizedBox(height: 12),
-                _buildFilterChips(provider),
-                const SizedBox(height: 12),
-                Expanded(child: _buildMapPlaceholder()),
-              ],
-            ),
-          ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.42,
-            minChildSize: 0.25,
-            maxChildSize: 0.85,
-            snap: true,
-            snapSizes: const [0.25, 0.42, 0.85],
-            builder: (context, scrollController) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF111827),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  border: Border(
-                    top: BorderSide(color: Color(0xFF1F2937), width: 1),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 10),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4A5568),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${stations.length} stations in this view',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-
-                        ],
-                      ),
-                    ),
-                    const Divider(
-                      color: Color(0xFF1F2937),
-                      height: 1,
-                      thickness: 1,
-                    ),
-                    Expanded(
-                      child: provider.isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF00C853),
-                              ),
-                            )
-                          : stations.isEmpty
-                              ? _buildEmpty()
-                              : ListView.separated(
-                                  controller: scrollController,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                  itemCount: stations.length,
-                                  separatorBuilder: (_, __) => const Divider(
-                                    color: Color(0xFF1F2937),
-                                    height: 1,
-                                    thickness: 1,
-                                    indent: 76,
-                                  ),
-                                  itemBuilder: (context, i) {
-                                    final s = stations[i];
-                                    return StationListRow(
-                                      station: s,
-                                      status: provider.pseudoStatus(s),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => StationDetailScreen(
-                                              stationId: s.id,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          if (provider.isLoading && provider.allStations.isEmpty)
-            const RadarOverlay(
-              statusText: 'SCANNING NEARBY STATIONS...',
-            ),
-        ],
-      ),
-      bottomNavigationBar: const DarkBottomNav(currentIndex: 1),
-    );
-  }
-
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        const SafeArea(bottom: false, child: AppTopBar()),
+        Expanded(
+          child: Stack(
             children: [
-              const Text(
-                'EV RADAR',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
+              Column(
                 children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00C853),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'NAIROBI - KPLC READY',
-                    style: TextStyle(
-                      color: Color(0xFF8892B0),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  _buildSearchBar(),
+                  const SizedBox(height: 12),
+                  _buildFilterChips(provider),
+                  const SizedBox(height: 12),
+                  Expanded(child: _buildMapPlaceholder(provider)),
                 ],
               ),
+              DraggableScrollableSheet(
+                initialChildSize: 0.42,
+                minChildSize: 0.25,
+                maxChildSize: 0.85,
+                snap: true,
+                snapSizes: const [0.25, 0.42, 0.85],
+                builder: (context, scrollController) {
+                  return Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF111827),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      border: Border(
+                        top: BorderSide(color: Color(0xFF1F2937), width: 1),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4A5568),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${stations.length} stations in this view',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          color: Color(0xFF1F2937),
+                          height: 1,
+                          thickness: 1,
+                        ),
+                        Expanded(
+                          child: provider.isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF00C853),
+                                  ),
+                                )
+                              : stations.isEmpty
+                                  ? _buildEmpty()
+                                  : ListView.separated(
+                                      controller: scrollController,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      itemCount: stations.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(
+                                        color: Color(0xFF1F2937),
+                                        height: 1,
+                                        thickness: 1,
+                                        indent: 76,
+                                      ),
+                                      itemBuilder: (context, i) {
+                                        final s = stations[i];
+                                        return StationListRow(
+                                          station: s,
+                                          status: provider.pseudoStatus(s),
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    StationDetailScreen(
+                                                  stationId: s.id,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              if (provider.isLoading && provider.allStations.isEmpty)
+                const RadarOverlay(
+                  statusText: 'SCANNING NEARBY STATIONS...',
+                ),
             ],
           ),
-          const Spacer(),
-          _circleIcon(Icons.notifications_none, hasBadge: true),
-          const SizedBox(width: 8),
-          _circleIcon(Icons.person_outline),
-        ],
-      ),
-    );
-  }
-
-  Widget _circleIcon(IconData icon,
-      {bool hasBadge = false, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1A2332),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-          if (hasBadge)
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C853),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: const Color(0xFF0A0E1A), width: 1.5),
-                ),
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -331,7 +244,7 @@ class _StationsScreenState extends State<StationsScreen> {
     );
   }
 
-  Widget _buildMapPlaceholder() {
+  Widget _buildMapPlaceholder(ChargingProvider provider) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       decoration: BoxDecoration(
@@ -359,8 +272,7 @@ class _StationsScreenState extends State<StationsScreen> {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh,
-                        color: Colors.black, size: 16),
+                    Icon(Icons.refresh, color: Colors.black, size: 16),
                     SizedBox(width: 6),
                     Text(
                       'Refresh Stations',
@@ -401,7 +313,6 @@ class _StationsScreenState extends State<StationsScreen> {
               ],
             ),
           ),
-
         ],
       ),
     );
