@@ -36,7 +36,10 @@ class _AppShellState extends State<AppShell> {
             child: IndexedStack(
               index: _index,
               children: [
-                CockpitScreen(onSeeAllStations: () => _goTo(1)),
+                CockpitScreen(
+                  onSeeAllStations: () => _goTo(1),
+                  onViewTripDetails: () => _goTo(2),
+                ),
                 const StationsScreen(),
                 PlannerScreen(onStartNavigation: () => _goTo(1)),
                 const ServicesScreen(),

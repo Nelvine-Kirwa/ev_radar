@@ -1,28 +1,42 @@
 import 'package:flutter/material.dart';
 
-class TripProvider extends ChangeNotifier {
-  List<Map<String, dynamic>> _trips = [];
-  Map<String, dynamic>? _activeTrip;
+class ActiveTrip {
+  final String destination;
+  final double distanceKm;
+  final int etaMinutes;
+  final String originLabel;
 
-  List<Map<String, dynamic>> get trips => _trips;
-  Map<String, dynamic>? get activeTrip => _activeTrip;
+  const ActiveTrip({
+    required this.destination,
+    required this.distanceKm,
+    required this.etaMinutes,
+    this.originLabel = 'Current Location',
+  });
+}
+
+class TripProvider extends ChangeNotifier {
+  ActiveTrip? _activeTrip;
+
+  ActiveTrip? get activeTrip => _activeTrip;
   bool get hasActiveTrip => _activeTrip != null;
 
-  void startTrip(String destination, double distanceKm) {
-    _activeTrip = {
-      'destination': destination,
-      'distanceKm': distanceKm,
-      'startedAt': DateTime.now().toIso8601String(),
-    };
+  void startTrip(ActiveTrip trip) {
+    _activeTrip = trip;
     notifyListeners();
   }
 
   void endTrip() {
-    if (_activeTrip != null) {
-      _activeTrip!['endedAt'] = DateTime.now().toIso8601String();
-      _trips.add(_activeTrip!);
-      _activeTrip = null;
-      notifyListeners();
-    }
+    _activeTrip = null;
+    notifyListeners();
+  }
+
+  // Demo helper — used until real trip planning is wired
+  void startDemoTrip() {
+    _activeTrip = const ActiveTrip(
+      destination: 'Karen, Nairobi',
+      distanceKm: 12,
+      etaMinutes: 18,
+    );
+    notifyListeners();
   }
 }

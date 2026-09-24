@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
+import '../providers/trip_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../widgets/battery_gauge.dart';
 import '../widgets/quick_stat_card.dart';
@@ -9,7 +10,12 @@ import 'station_detail_screen.dart';
 
 class CockpitScreen extends StatefulWidget {
   final VoidCallback? onSeeAllStations;
-  const CockpitScreen({super.key, this.onSeeAllStations});
+  final VoidCallback? onViewTripDetails;
+  const CockpitScreen({
+    super.key,
+    this.onSeeAllStations,
+    this.onViewTripDetails,
+  });
 
   @override
   State<CockpitScreen> createState() => _CockpitScreenState();
@@ -227,6 +233,9 @@ class _CockpitScreenState extends State<CockpitScreen> {
   }
 
   Widget _buildActiveTripCard() {
+    final trip = context.watch<TripProvider>().activeTrip;
+    final hasTrip = trip != null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -263,74 +272,109 @@ class _CockpitScreenState extends State<CockpitScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          const Text(
-            'Karen, Nairobi',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '12 km remaining  -  18 min ETA',
-            style: TextStyle(color: Color(0xFF8892B0), fontSize: 12),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F2937),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: 0.65,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C853),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+          if (hasTrip) ...[
+            Text(
+              trip.destination,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'View Details',
-                style: TextStyle(
-                  color: Color(0xFF00C853),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
+            const SizedBox(height: 4),
+            Text(
+              '${trip.distanceKm.toStringAsFixed(0)} km remaining  -  ${trip.etaMinutes} min ETA',
+              style: const TextStyle(
+                  color: Color(0xFF8892B0), fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(2),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFD32F2F)),
-                ),
-                child: const Text(
-                  'End Trip',
-                  style: TextStyle(
-                    color: Color(0xFFD32F2F),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: 0.65,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _outlineButton(
+                  label: 'View Details',
+                  color: const Color(0xFF00C853),
+                  onTap: widget.onViewTripDetails ?? () {},
+                ),
+                _outlineButton(
+                  label: 'End Trip',
+                  color: const Color(0xFFD32F2F),
+                  onTap: () {
+                    context.read<TripProvider>().endTrip();
+                  },
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            const Center(
+              child: Text(
+                'No active trip',
+                style: TextStyle(
+                  color: Color(0xFF8892B0),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: _outlineButton(
+                label: 'Plan New Trip',
+                color: const Color(0xFF00C853),
+                onTap: widget.onViewTripDetails ?? () {},
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildNearbyCharging(List<dynamic> nearby) {
+  Widget _outlineButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }  Widget _buildNearbyCharging(List<dynamic> nearby) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
