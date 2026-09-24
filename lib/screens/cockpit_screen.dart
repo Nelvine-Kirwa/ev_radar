@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
 import '../providers/vehicle_provider.dart';
-import '../widgets/app_top_bar.dart';
 import '../widgets/battery_gauge.dart';
 import '../widgets/quick_stat_card.dart';
 import '../widgets/vehicle_card.dart';
 import 'station_detail_screen.dart';
 
 class CockpitScreen extends StatefulWidget {
-  const CockpitScreen({super.key});
+  final VoidCallback? onSeeAllStations;
+  const CockpitScreen({super.key, this.onSeeAllStations});
 
   @override
   State<CockpitScreen> createState() => _CockpitScreenState();
@@ -35,7 +35,6 @@ class _CockpitScreenState extends State<CockpitScreen> {
 
     return Column(
       children: [
-        const SafeArea(bottom: false, child: AppTopBar()),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -354,7 +353,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () {},
+                onTap: widget.onSeeAllStations,
                 child: const Row(
                   children: [
                     Text(
@@ -457,36 +456,6 @@ class _CockpitScreenState extends State<CockpitScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: _actionTile(
-            icon: Icons.bolt,
-            label: 'Find Charger',
-            onTap: () {},
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _actionTile(
-            icon: Icons.alt_route,
-            label: 'Plan Trip',
-            onTap: () {},
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _actionTile(
-            icon: Icons.directions_car_outlined,
-            label: 'My Vehicle',
-            onTap: () {},
-          ),
-        ),
-      ],
     );
   }
 

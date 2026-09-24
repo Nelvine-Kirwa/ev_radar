@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/charging_station.dart';
 import '../providers/charging_provider.dart';
-import '../widgets/dark_bottom_nav.dart';
 
 class StationDetailScreen extends StatefulWidget {
   final String stationId;
@@ -85,7 +84,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const DarkBottomNav(currentIndex: 1),
     );
   }
 
@@ -502,7 +500,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Hours & Contact',
+          const Text('Contact',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -510,24 +508,15 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.access_time,
+              const Icon(Icons.business_outlined,
                   color: Color(0xFF00C853), size: 18),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s.operatingHours,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 2),
-                    const Text('Manned security on site',
-                        style: TextStyle(
-                            color: Color(0xFF8892B0), fontSize: 11)),
-                  ],
-                ),
+                child: Text(s.operator,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
               ),
             ],
           ),

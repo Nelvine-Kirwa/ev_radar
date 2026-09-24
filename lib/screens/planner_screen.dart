@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/trip_plan.dart';
 import '../services/trip_planner_service.dart';
-import '../widgets/app_top_bar.dart';
 
 class PlannerScreen extends StatefulWidget {
   final VoidCallback? onStartNavigation;
@@ -24,7 +23,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SafeArea(bottom: false, child: AppTopBar()),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),

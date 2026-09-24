@@ -6,6 +6,7 @@ class GlassScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget? bottomNav;
   final bool useSafeArea;
+  final Color? backgroundOverride;
 
   const GlassScaffold({
     super.key,
@@ -13,27 +14,30 @@ class GlassScaffold extends StatelessWidget {
     this.appBar,
     this.bottomNav,
     this.useSafeArea = true,
+    this.backgroundOverride,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      backgroundColor: GlassColors.bgTop,
+      backgroundColor: backgroundOverride ?? GlassColors.bgTop,
       appBar: appBar,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              GlassColors.bgTop,
-              GlassColors.bgMid,
-              GlassColors.bgBottom,
-            ],
-            stops: [0.0, 0.55, 1.0],
-          ),
-        ),
+        decoration: backgroundOverride != null
+            ? BoxDecoration(color: backgroundOverride)
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    GlassColors.bgTop,
+                    GlassColors.bgMid,
+                    GlassColors.bgBottom,
+                  ],
+                  stops: [0.0, 0.55, 1.0],
+                ),
+              ),
         child: useSafeArea
             ? SafeArea(bottom: false, child: child)
             : child,

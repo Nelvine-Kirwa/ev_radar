@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_top_bar.dart';
 import '../data/equipment_data.dart';
 import '../models/equipment.dart';
 import 'equipment_detail_screen.dart';
@@ -18,7 +17,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SafeArea(bottom: false, child: AppTopBar()),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),

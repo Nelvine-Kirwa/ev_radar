@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
-import '../widgets/app_top_bar.dart';
 import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
 import '../widgets/radar_overlay.dart';
@@ -45,19 +44,15 @@ class _StationsScreenState extends State<StationsScreen> {
 
     return Column(
       children: [
-        const SafeArea(bottom: false, child: AppTopBar()),
+        const SizedBox(height: 4),
+        _buildSearchBar(),
+        const SizedBox(height: 12),
+        _buildFilterChips(provider),
+        const SizedBox(height: 12),
         Expanded(
           child: Stack(
             children: [
-              Column(
-                children: [
-                  _buildSearchBar(),
-                  const SizedBox(height: 12),
-                  _buildFilterChips(provider),
-                  const SizedBox(height: 12),
-                  Expanded(child: _buildMapPlaceholder(provider)),
-                ],
-              ),
+              _buildMapPlaceholder(provider),
               DraggableScrollableSheet(
                 initialChildSize: 0.42,
                 minChildSize: 0.25,
@@ -65,90 +60,99 @@ class _StationsScreenState extends State<StationsScreen> {
                 snap: true,
                 snapSizes: const [0.25, 0.42, 0.85],
                 builder: (context, scrollController) {
-                  return Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF111827),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                      border: Border(
-                        top: BorderSide(color: Color(0xFF1F2937), width: 1),
-                      ),
+                  return Material(
+                    color: const Color(0xFF111827),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
                     ),
-                    child: Column(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A5568),
-                            borderRadius: BorderRadius.circular(2),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        border: Border(
+                          top: BorderSide(
+                              color: Color(0xFF1F2937), width: 1),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 10),
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4A5568),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-                          child: Row(
-                            children: [
-                              Text(
-                                '${stations.length} stations in this view',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(
-                          color: Color(0xFF1F2937),
-                          height: 1,
-                          thickness: 1,
-                        ),
-                        Expanded(
-                          child: provider.isLoading
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFF00C853),
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                            child: Row(
+                              children: [
+                                Text(
+                                  '${stations.length} stations in this view',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                )
-                              : stations.isEmpty
-                                  ? _buildEmpty()
-                                  : ListView.separated(
-                                      controller: scrollController,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8),
-                                      itemCount: stations.length,
-                                      separatorBuilder: (_, __) =>
-                                          const Divider(
-                                        color: Color(0xFF1F2937),
-                                        height: 1,
-                                        thickness: 1,
-                                        indent: 76,
-                                      ),
-                                      itemBuilder: (context, i) {
-                                        final s = stations[i];
-                                        return StationListRow(
-                                          station: s,
-                                          status: provider.pseudoStatus(s),
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    StationDetailScreen(
-                                                  stationId: s.id,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(
+                            color: Color(0xFF1F2937),
+                            height: 1,
+                            thickness: 1,
+                          ),
+                          Expanded(
+                            child: provider.isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00C853),
                                     ),
-                        ),
-                      ],
+                                  )
+                                : stations.isEmpty
+                                    ? _buildEmpty()
+                                    : ListView.separated(
+                                        controller: scrollController,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8),
+                                        itemCount: stations.length,
+                                        separatorBuilder: (_, __) =>
+                                            const Divider(
+                                          color: Color(0xFF1F2937),
+                                          height: 1,
+                                          thickness: 1,
+                                          indent: 76,
+                                        ),
+                                        itemBuilder: (context, i) {
+                                          final s = stations[i];
+                                          return StationListRow(
+                                            station: s,
+                                            status:
+                                                provider.pseudoStatus(s),
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      StationDetailScreen(
+                                                    stationId: s.id,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -182,7 +186,8 @@ class _StationsScreenState extends State<StationsScreen> {
             hintStyle: TextStyle(color: Color(0xFF4A5568), fontSize: 14),
             prefixIcon:
                 Icon(Icons.search, color: Color(0xFF8892B0), size: 20),
-            suffixIcon: Icon(Icons.tune, color: Color(0xFF8892B0), size: 20),
+            suffixIcon:
+                Icon(Icons.tune, color: Color(0xFF8892B0), size: 20),
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(vertical: 14),
           ),
@@ -198,49 +203,25 @@ class _StationsScreenState extends State<StationsScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
-          _chip(
-            label: 'All',
-            filter: StationFilter.all,
-            provider: provider,
-          ),
+          _chip('All', StationFilter.all, provider),
           const SizedBox(width: 8),
-          _chip(
-            label: 'Available',
-            filter: StationFilter.available,
-            provider: provider,
-          ),
+          _chip('Available', StationFilter.available, provider),
           const SizedBox(width: 8),
-          _chip(
-            label: 'Fast Charging',
-            filter: StationFilter.fast,
-            provider: provider,
-          ),
+          _chip('Fast Charging', StationFilter.fast, provider),
           const SizedBox(width: 8),
-          _chip(
-            label: 'Nearby',
-            filter: StationFilter.nearby,
-            provider: provider,
-          ),
+          _chip('Nearby', StationFilter.nearby, provider),
           const SizedBox(width: 8),
-          _chip(
-            label: 'Saved',
-            filter: StationFilter.saved,
-            provider: provider,
-          ),
+          _chip('Saved', StationFilter.saved, provider),
         ],
       ),
     );
   }
 
-  Widget _chip({
-    required String label,
-    required StationFilter filter,
-    required ChargingProvider provider,
-  }) {
+  Widget _chip(String label, StationFilter filter, ChargingProvider p) {
     return StationFilterChip(
       label: label,
-      isActive: provider.activeFilter == filter,
-      onTap: () => provider.setFilter(filter),
+      isActive: p.activeFilter == filter,
+      onTap: () => p.setFilter(filter),
     );
   }
 
@@ -259,12 +240,10 @@ class _StationsScreenState extends State<StationsScreen> {
             top: 12,
             right: 12,
             child: GestureDetector(
-              onTap: () {
-                context.read<ChargingProvider>().loadAllStations();
-              },
+              onTap: () => provider.loadAllStations(),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00C853),
                   borderRadius: BorderRadius.circular(20),
@@ -274,14 +253,11 @@ class _StationsScreenState extends State<StationsScreen> {
                   children: [
                     Icon(Icons.refresh, color: Colors.black, size: 16),
                     SizedBox(width: 6),
-                    Text(
-                      'Refresh Stations',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text('Refresh Stations',
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -291,25 +267,19 @@ class _StationsScreenState extends State<StationsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.map_outlined,
-                  color: const Color(0xFF00C853).withOpacity(0.7),
-                  size: 40,
-                ),
+                Icon(Icons.map_outlined,
+                    color: const Color(0xFF00C853).withOpacity(0.7),
+                    size: 40),
                 const SizedBox(height: 12),
-                const Text(
-                  'Map view coming soon',
-                  style: TextStyle(
-                    color: Color(0xFF8892B0),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                const Text('Map view coming soon',
+                    style: TextStyle(
+                        color: Color(0xFF8892B0),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                const Text(
-                  'Stations list is fully functional below',
-                  style: TextStyle(color: Color(0xFF4A5568), fontSize: 11),
-                ),
+                const Text('Stations list is fully functional below',
+                    style: TextStyle(
+                        color: Color(0xFF4A5568), fontSize: 11)),
               ],
             ),
           ),
@@ -325,10 +295,8 @@ class _StationsScreenState extends State<StationsScreen> {
         children: [
           Icon(Icons.search_off, color: Color(0xFF4A5568), size: 40),
           SizedBox(height: 12),
-          Text(
-            'No stations match your search',
-            style: TextStyle(color: Color(0xFF8892B0), fontSize: 14),
-          ),
+          Text('No stations match your search',
+              style: TextStyle(color: Color(0xFF8892B0), fontSize: 14)),
         ],
       ),
     );

@@ -3,11 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
 import '../providers/auth_provider.dart';
-import 'auth/login_screen.dart';
+import '../widgets/glass_dropdown.dart';
 import '../widgets/glass/glass_scaffold.dart';
 import '../widgets/glass/glass_card.dart';
 import '../widgets/glass/glass_button.dart';
 import '../widgets/glass/glass_list_item.dart';
+import 'become_operator_screen.dart';
+import 'become_technician_screen.dart';
+import 'terms_dialog.dart';
+import 'auth/login_screen.dart';
 
 class ProfileSupportScreen extends StatelessWidget {
   const ProfileSupportScreen({super.key});
@@ -32,7 +36,15 @@ class ProfileSupportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final name = auth.displayName;
+    final email = auth.displayEmail;
+    final phone = auth.displayPhone;
+    final roleLabel = auth.roleLabel;
+    final initials = _initials(name);
+
     return GlassScaffold(
+      backgroundOverride: const Color(0xFF0A0E1A),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -43,68 +55,102 @@ class ProfileSupportScreen extends StatelessWidget {
         titleSpacing: 0,
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: GlassColors.cardFill,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: GlassColors.cardBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: GlassColors.online,
-                      shape: BoxShape.circle,
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: GlassColors.cardFill,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: GlassColors.cardBorder),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: GlassColors.online,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'EV RADAR KENYA',
-                    style: TextStyle(
-                      color: GlassColors.textPrimary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Profile & Support',
+                      style: TextStyle(
+                        color: GlassColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.settings_outlined,
-                color: GlassColors.textPrimary),
-            onSelected: (value) async {
-              if (value == 'signout') {
-                final auth = context.read<AuthProvider>();
-                final navigator = Navigator.of(context);
-                await auth.signOut();
-                navigator.pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(
-                value: 'signout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 18, color: Color(0xFFD32F2F)),
-                    SizedBox(width: 10),
-                    Text('Sign Out',
-                        style: TextStyle(color: Color(0xFFD32F2F))),
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.settings_outlined,
+                  color: GlassColors.textPrimary),
+              onPressed: () {
+                final box = ctx.findRenderObject() as RenderBox?;
+                final pos =
+                    box?.localToGlobal(Offset.zero) ?? Offset.zero;
+                GlassDropdown.show(
+                  context: ctx,
+                  position:
+                      Offset(pos.dx, pos.dy + (box?.size.height ?? 40)),
+                  items: [
+                    GlassMenuItem(
+                      icon: Icons.storefront_outlined,
+                      label: 'Become Operator',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BecomeOperatorScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    GlassMenuItem(
+                      icon: Icons.handyman_outlined,
+                      label: 'Become Technician',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BecomeTechnicianScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    GlassMenuItem(
+                      icon: Icons.description_outlined,
+                      label: 'Terms & Conditions',
+                      onTap: () => TermsDialog.show(context),
+                    ),
+                    GlassMenuItem(
+                      icon: Icons.logout,
+                      label: 'Sign Out',
+                      isDestructive: true,
+                      onTap: () async {
+                        final navigator = Navigator.of(context);
+                        await context.read<AuthProvider>().signOut();
+                        navigator.pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
+                    ),
                   ],
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -125,14 +171,13 @@ class ProfileSupportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Manage your driver identity and get assistance',
+              'Manage your account and get assistance',
               style: TextStyle(
                 color: GlassColors.textSecondary,
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 20),
-
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -149,9 +194,9 @@ class ProfileSupportScreen extends StatelessWidget {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      'NK',
-                      style: TextStyle(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
                         color: GlassColors.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -159,22 +204,22 @@ class ProfileSupportScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Nelvin Kipchirchir',
-                          style: TextStyle(
+                          name,
+                          style: const TextStyle(
                             color: GlassColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        SizedBox(height: 3),
+                        const SizedBox(height: 3),
                         Text(
-                          'Nairobi Metro  -  EV Fleet Member',
-                          style: TextStyle(
+                          roleLabel,
+                          style: const TextStyle(
                             color: GlassColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -186,7 +231,6 @@ class ProfileSupportScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
-
             const Padding(
               padding: EdgeInsets.only(left: 4, bottom: 10),
               child: Text(
@@ -206,19 +250,19 @@ class ProfileSupportScreen extends StatelessWidget {
                   _InfoRow(
                     icon: Icons.badge_outlined,
                     label: 'FULL NAME',
-                    value: 'Nelvin Kipchirchir',
+                    value: name,
                   ),
                   _divider(),
                   _InfoRow(
                     icon: Icons.mail_outline,
                     label: 'EMAIL ADDRESS',
-                    value: SupportDetails.email,
+                    value: email,
                   ),
                   _divider(),
                   _InfoRow(
                     icon: Icons.phone_outlined,
                     label: 'PHONE NUMBER',
-                    value: SupportDetails.phoneNumber,
+                    value: phone.isEmpty ? '--' : phone,
                   ),
                 ],
               ),
@@ -227,14 +271,9 @@ class ProfileSupportScreen extends StatelessWidget {
             GlassButton(
               label: 'Update Profile',
               icon: Icons.edit_outlined,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile editing coming soon')),
-                );
-              },
+              onPressed: () => _showEditDialog(context, name, phone),
             ),
             const SizedBox(height: 28),
-
             const Padding(
               padding: EdgeInsets.only(left: 4, bottom: 10),
               child: Text(
@@ -291,7 +330,6 @@ class ProfileSupportScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
-
             Text(
               'EV RADAR KENYA  -  ${SupportDetails.appVersion}',
               textAlign: TextAlign.center,
@@ -315,6 +353,104 @@ class ProfileSupportScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showEditDialog(
+      BuildContext context, String currentName, String currentPhone) {
+    final nameCtrl = TextEditingController(text: currentName);
+    final phoneCtrl = TextEditingController(text: currentPhone);
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Update Profile',
+          style: TextStyle(color: Colors.white, fontSize: 17),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: _dialogInputDecoration('Full Name', Icons.person_outline),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              style: const TextStyle(color: Colors.white),
+              decoration: _dialogInputDecoration('Phone Number', Icons.phone_outlined),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF8892B0))),
+          ),
+          TextButton(
+            onPressed: () async {
+              final auth = context.read<AuthProvider>();
+              final nav = Navigator.of(dialogCtx);
+              final messenger = ScaffoldMessenger.of(context);
+              final ok = await auth.updateProfile(
+                name: nameCtrl.text.trim(),
+                phone: phoneCtrl.text.trim(),
+              );
+              nav.pop();
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok
+                      ? 'Profile updated'
+                      : (auth.error ?? 'Update failed')),
+                ),
+              );
+            },
+            child: const Text('Save',
+                style: TextStyle(color: Color(0xFF00C853))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _dialogInputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFF8892B0)),
+      prefixIcon: Icon(icon, color: const Color(0xFF8892B0), size: 20),
+      filled: true,
+      fillColor: const Color(0xFF0A0E1A),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF1F2937)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF00C853), width: 1.5),
+      ),
+    );
+  }
+
+  String _initials(String name) {
+    if (name.isEmpty) return 'EV';
+    final parts = name.trim().split(' ');
+    if (parts.length == 1) {
+      return parts[0].substring(0, 1).toUpperCase();
+    }
+    return (parts[0].substring(0, 1) +
+            parts[parts.length - 1].substring(0, 1))
+        .toUpperCase();
   }
 
   Widget _divider() => const Divider(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/constants.dart';
 import 'auth/login_screen.dart';
-import 'home_screen.dart';
+import 'app_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     final destination = user != null
-        ? const HomeScreen()
+        ? const AppShell()
         : const LoginScreen();
 
     Navigator.pushReplacement(
