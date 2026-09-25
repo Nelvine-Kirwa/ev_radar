@@ -5,6 +5,7 @@ import 'cockpit_screen.dart';
 import 'stations_screen.dart';
 import 'planner_screen.dart';
 import 'services_screen.dart';
+import 'vehicle_picker_screen.dart';
 
 class AppShell extends StatefulWidget {
   final int initialIndex;
@@ -39,6 +40,14 @@ class _AppShellState extends State<AppShell> {
                 CockpitScreen(
                   onSeeAllStations: () => _goTo(1),
                   onViewTripDetails: () => _goTo(2),
+                  onManageVehicle: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const VehiclePickerScreen()),
+                    );
+                  },
                 ),
                 const StationsScreen(),
                 PlannerScreen(onStartNavigation: () => _goTo(1)),

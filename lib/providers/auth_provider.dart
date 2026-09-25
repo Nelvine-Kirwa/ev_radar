@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../models/user_vehicle.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
@@ -189,6 +190,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<List<UserVehicle>> loadVehicles() async {
+    return await _service.loadUserVehicles();
+  }
+
+  Future<int> loadCurrentVehicleIndex() async {
+    return await _service.loadCurrentVehicleIndex();
+  }
+
+  Future<void> saveVehicles(
+      List<UserVehicle> vehicles, int currentIndex) async {
+    await _service.saveUserVehicles(vehicles, currentIndex);
+  }
   void clearError() {
     _error = null;
     notifyListeners();

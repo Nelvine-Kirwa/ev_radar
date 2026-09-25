@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import '../utils/constants.dart';
 import 'auth/login_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/vehicle_provider.dart';
 import 'app_shell.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -23,6 +26,22 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null && mounted) {
+      final auth = context.read<AuthProvider>();
+      final vp = context.read<VehicleProvider>();
+      try {
+        await vp.loadAvailableCars();
+        final vehicles = await auth.loadVehicles();
+        final idx = await auth.loadCurrentVehicleIndex();
+        if (vehicles.isNotEmpty) {
+          vp.setUserVehicles(vehicles, index: idx);
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
     final destination = user != null
         ? const AppShell()
         : const LoginScreen();

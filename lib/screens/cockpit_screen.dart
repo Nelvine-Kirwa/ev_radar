@@ -11,10 +11,12 @@ import 'station_detail_screen.dart';
 class CockpitScreen extends StatefulWidget {
   final VoidCallback? onSeeAllStations;
   final VoidCallback? onViewTripDetails;
+  final VoidCallback? onManageVehicle;
   const CockpitScreen({
     super.key,
     this.onSeeAllStations,
     this.onViewTripDetails,
+    this.onManageVehicle,
   });
 
   @override
@@ -29,6 +31,10 @@ class _CockpitScreenState extends State<CockpitScreen> {
       final p = context.read<ChargingProvider>();
       if (p.allStations.isEmpty) {
         p.loadAllStations();
+      }
+      final vp = context.read<VehicleProvider>();
+      if (vp.availableCars.isEmpty) {
+        vp.loadAvailableCars();
       }
     });
   }
@@ -221,17 +227,80 @@ class _CockpitScreenState extends State<CockpitScreen> {
   }
 
   Widget _buildVehicleCard() {
+    final vp = context.watch<VehicleProvider>();
+    final car = vp.currentCar;
+    final userVehicle = vp.currentUserVehicle;
+
+    if (car == null || userVehicle == null) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF1F2937)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'MY VEHICLE',
+              style: TextStyle(
+                color: Color(0xFF8892B0),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Center(
+              child: Text(
+                'No vehicle added',
+                style: TextStyle(
+                  color: Color(0xFF8892B0),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: GestureDetector(
+                onTap: widget.onManageVehicle,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: const Color(0xFF00C853), width: 1.2),
+                  ),
+                  child: const Text(
+                    'Add Vehicle',
+                    style: TextStyle(
+                      color: Color(0xFF00C853),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return VehicleCard(
       imagePath: 'assets/images/vehicle/my_vehicle.jpg',
-      modelName: 'Tesla Model 3',
-      trim: 'Long Range',
-      plate: 'KDA 123A',
-      rangeKm: 376,
-      onManage: () {},
+      modelName: car.displayName,
+      trim: car.model,
+      plate: userVehicle.plate,
+      rangeKm: car.rangeKm,
+      onManage: widget.onManageVehicle,
       onConnect: () {},
     );
   }
-
   Widget _buildActiveTripCard() {
     final trip = context.watch<TripProvider>().activeTrip;
     final hasTrip = trip != null;

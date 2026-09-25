@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user_vehicle.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -131,6 +132,44 @@ class AuthService {
     });
   }
 
+  Future<List<UserVehicle>> loadUserVehicles() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return [];
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return [];
+      final list = (doc.data()?['vehicles'] as List?) ?? [];
+      return list
+          .map((e) => UserVehicle.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<int> loadCurrentVehicleIndex() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return 0;
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return 0;
+      final idx = doc.data()?['currentVehicleIndex'];
+      if (idx is int) return idx;
+    } catch (_) {}
+    return 0;
+  }
+
+  Future<void> saveUserVehicles(
+    List<UserVehicle> vehicles,
+    int currentIndex,
+  ) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw Exception('Not signed in');
+    await _db.collection('users').doc(uid).set({
+      'vehicles': vehicles.map((v) => v.toMap()).toList(),
+      'currentVehicleIndex': currentIndex,
+    }, SetOptions(merge: true));
+  }
   String friendlyError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
