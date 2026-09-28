@@ -4,6 +4,7 @@ import '../data/equipment_data.dart';
 import '../models/equipment.dart';
 import '../providers/auth_provider.dart';
 import '../services/booking_service.dart';
+import '../services/location_service.dart';
 import 'booking_confirmation_screen.dart';
 
 class EquipmentDetailScreen extends StatefulWidget {
@@ -21,6 +22,35 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
   );
   int _selectedElectrician = 0;
   bool _isSubmitting = false;
+  double? _latitude;
+  double? _longitude;
+  bool _capturingLocation = false;
+
+  Future<void> _captureLocation() async {
+    setState(() => _capturingLocation = true);
+    try {
+      final pos = await LocationService().getCurrentLocation();
+      if (!mounted) return;
+      if (pos == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission denied')),
+        );
+      } else {
+        setState(() {
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _capturingLocation = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -48,6 +78,8 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
       electricianName: e['name'],
       electricianRating: (e['rating'] as num).toDouble(),
       address: _addressController.text.trim(),
+      latitude: _latitude,
+      longitude: _longitude,
       bookingFeeKsh: 2500,
     );
 
@@ -232,6 +264,89 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 14),
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _capturingLocation ? null : _captureLocation,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF00C853)),
+              ),
+              alignment: Alignment.center,
+              child: _capturingLocation
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Color(0xFF00C853)),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.my_location,
+                            color: Color(0xFF00C853), size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          _latitude != null && _longitude != null
+                              ? 'Recapture Location Coordinates'
+                              : 'Share Current Location Coordinates',
+                          style: const TextStyle(
+                            color: Color(0xFF00C853),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          if (_latitude != null && _longitude != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _coordChip('Lat', _latitude!.toStringAsFixed(5)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _coordChip('Lng', _longitude!.toStringAsFixed(5)),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _coordChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x1A00C853),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x6600C853)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle,
+              color: Color(0xFF00C853), size: 14),
+          const SizedBox(width: 6),
+          Text('$label: ',
+              style: const TextStyle(
+                  color: Color(0xFF8892B0), fontSize: 11)),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

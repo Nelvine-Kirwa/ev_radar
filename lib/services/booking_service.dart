@@ -16,6 +16,8 @@ class BookingService {
     required double electricianRating,
     required String address,
     required int bookingFeeKsh,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final ref = await _col.add({
@@ -30,11 +32,13 @@ class BookingService {
         'address': address,
         'status': 'SCHEDULED',
         'bookingFeeKsh': bookingFeeKsh,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
         'createdAt': FieldValue.serverTimestamp(),
       });
       return ref.id;
     } catch (e) {
-      print('Error creating booking: $e');
+      debugPrint('Error creating booking: $e');
       return null;
     }
   }

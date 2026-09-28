@@ -397,7 +397,7 @@ class _BecomeOperatorScreenState extends State<BecomeOperatorScreen> {
                 )
               : const Icon(Icons.my_location, size: 18),
           label: Text(
-            hasLocation ? 'Recapture Location' : 'Use My Current Location',
+            hasLocation ? 'Recapture Location' : 'Share Current Location Coordinates',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           style: OutlinedButton.styleFrom(
