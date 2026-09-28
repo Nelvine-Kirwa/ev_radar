@@ -23,27 +23,14 @@ class AppTopBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00C853),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'NAIROBI - KPLC READY',
-                    style: TextStyle(
-                      color: Color(0xFF8892B0),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
+              const Text(
+                'Smart EV Tracking & Charging',
+                style: TextStyle(
+                  color: Color(0xFF8892B0),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                ),
               ),
             ],
           ),

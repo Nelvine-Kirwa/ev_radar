@@ -9,6 +9,7 @@ import 'providers/auth_provider.dart';
 import 'providers/vehicle_provider.dart';
 import 'providers/charging_provider.dart';
 import 'providers/trip_provider.dart';
+import 'providers/installation_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 
@@ -42,6 +43,7 @@ class EVRadarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => ChargingProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
+        ChangeNotifierProvider(create: (_) => InstallationProvider()),
       ],
       child: MaterialApp(
         title: AppStrings.appName,

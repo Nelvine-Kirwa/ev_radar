@@ -5,6 +5,8 @@ import 'auth/login_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
+import '../providers/installation_provider.dart';
+import '../models/user_vehicle.dart';
 import 'app_shell.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -31,11 +33,24 @@ class _SplashScreenState extends State<SplashScreen> {
       final auth = context.read<AuthProvider>();
       final vp = context.read<VehicleProvider>();
       try {
-        await vp.loadAvailableCars();
-        final vehicles = await auth.loadVehicles();
-        final idx = await auth.loadCurrentVehicleIndex();
+        // Parallel load: catalog + user vehicles + index + bookings
+        final results = await Future.wait([
+          vp.loadAvailableCars(),
+          auth.loadVehicles(),
+          auth.loadCurrentVehicleIndex(),
+        ]);
+        final vehicles = results[1] as List<UserVehicle>;
+        final idx = results[2] as int;
         if (vehicles.isNotEmpty) {
           vp.setUserVehicles(vehicles, index: idx);
+        }
+      } catch (_) {
+        // Silent — user can still use the app
+      }
+
+      try {
+        if (user.uid.isNotEmpty) {
+          await context.read<InstallationProvider>().loadForUser(user.uid);
         }
       } catch (_) {}
     }

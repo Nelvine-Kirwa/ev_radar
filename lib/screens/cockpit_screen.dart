@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../widgets/battery_gauge.dart';
+import '../widgets/battery_indicator.dart';
 import '../widgets/quick_stat_card.dart';
 import '../widgets/vehicle_card.dart';
 import 'station_detail_screen.dart';
@@ -36,9 +38,23 @@ class _CockpitScreenState extends State<CockpitScreen> {
       if (vp.availableCars.isEmpty) {
         vp.loadAvailableCars();
       }
+      if (vp.userVehicles.isEmpty) {
+        _reloadUserVehicles();
+      }
     });
   }
 
+  Future<void> _reloadUserVehicles() async {
+    final auth = context.read<AuthProvider>();
+    final vp = context.read<VehicleProvider>();
+    try {
+      final vehicles = await auth.loadVehicles();
+      final idx = await auth.loadCurrentVehicleIndex();
+      if (vehicles.isNotEmpty) {
+        vp.setUserVehicles(vehicles, index: idx);
+      }
+    } catch (_) {}
+  }
   @override
   Widget build(BuildContext context) {
     final vehicle = context.watch<VehicleProvider>();
@@ -71,8 +87,21 @@ class _CockpitScreenState extends State<CockpitScreen> {
   }
 
   Widget _buildBatteryCard(VehicleProvider vehicle) {
+    final tier = vehicle.batteryTier;
+    final Color tierColor;
+    switch (tier) {
+      case 2:
+        tierColor = const Color(0xFFD32F2F);
+        break;
+      case 1:
+        tierColor = const Color(0xFFFFA000);
+        break;
+      default:
+        tierColor = const Color(0xFF00C853);
+    }
+
     final percent = vehicle.batteryLevel;
-    final range = vehicle.rangeKm;
+    final rangeText = vehicle.rangeDisplayText;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -84,8 +113,9 @@ class _CockpitScreenState extends State<CockpitScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header row: BATTERY label (left) + battery icon (right)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Text(
                 'BATTERY',
@@ -96,78 +126,37 @@ class _CockpitScreenState extends State<CockpitScreen> {
                   letterSpacing: 1.2,
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  // Placeholder — tracking toggle coming later
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Connect Vehicle',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              const Spacer(),
+              BatteryIndicator(
+                percent: percent,
+                color: tierColor,
+                width: 92,
+                height: 34,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Center(child: BatteryGauge(percent: percent, size: 180)),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+          // Gauge with km inside
           Center(
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: range.toStringAsFixed(0),
-                    style: const TextStyle(
-                      color: Color(0xFF00C853),
-                      fontSize: 40,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                  const TextSpan(
-                    text: ' km',
-                    style: TextStyle(
-                      color: Color(0xFF00C853),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+            child: BatteryGauge(
+              percent: percent,
+              size: 180,
+              displayText: rangeText,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
+          // Tracking row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text(
-                'Tracking',
-                style: TextStyle(color: Color(0xFF8892B0), fontSize: 12),
-              ),
-              Text(
-                'Inactive',
-                style: TextStyle(
-                  color: Color(0xFF8892B0),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text('Tracking',
+                  style: TextStyle(
+                      color: Color(0xFF8892B0), fontSize: 12)),
+              Text('Inactive',
+                  style: TextStyle(
+                      color: Color(0xFF8892B0),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 8),
@@ -192,14 +181,13 @@ class _CockpitScreenState extends State<CockpitScreen> {
       ),
     );
   }
-
   Widget _buildStatsRow() {
     return Row(
       children: const [
         Expanded(
           child: QuickStatCard(
             label: 'Distance Today',
-            value: '24',
+            value: '--',
             unit: 'km',
             icon: Icons.route_outlined,
           ),
@@ -208,7 +196,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
         Expanded(
           child: QuickStatCard(
             label: 'Energy Used',
-            value: '3.8',
+            value: '--',
             unit: 'kWh',
             icon: Icons.bolt_outlined,
           ),
@@ -216,8 +204,8 @@ class _CockpitScreenState extends State<CockpitScreen> {
         SizedBox(width: 10),
         Expanded(
           child: QuickStatCard(
-            label: 'Vehicles Efficiency',
-            value: '6.3',
+            label: 'Vehicle Efficiency',
+            value: '--',
             unit: 'km/kWh',
             icon: Icons.speed_outlined,
           ),

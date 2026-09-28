@@ -49,11 +49,11 @@ class VehicleCard extends StatelessWidget {
                 child: Text(
                   modelName,
                   textAlign: TextAlign.right,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                   ),

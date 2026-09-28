@@ -6,8 +6,7 @@ const List<Equipment> kHardwareOptions = [
     category: 'LEVEL 2 - 32A',
     imagePath: 'assets/images/chargers/type2_ac.jpg',
     features: [
-      'Single-phase 32A overnight',
-      'KPLC residential meter ready',
+      'Single-phase 32A',
     ],
     priceLabel: 'TURNKEY PACKAGE',
     priceKsh: 74900,

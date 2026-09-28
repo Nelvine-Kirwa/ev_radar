@@ -89,7 +89,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Configure Booking',
+          'Book Installation',
           style: TextStyle(
             color: Colors.white,
             fontSize: 16,

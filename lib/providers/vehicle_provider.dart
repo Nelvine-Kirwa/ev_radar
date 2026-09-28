@@ -64,6 +64,10 @@ class VehicleProvider extends ChangeNotifier {
       _catalogError = e.toString();
     } finally {
       _loadingCatalog = false;
+      // Re-sync in case user vehicles loaded before the catalog
+      if (_userVehicles.isNotEmpty) {
+        _syncCurrentCar();
+      }
       notifyListeners();
     }
   }
@@ -115,6 +119,19 @@ class VehicleProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Text to show inside the gauge circle -- either "N km" or "-- km"
+  String get rangeDisplayText {
+    if (_currentCar == null) return '-- km';
+    final km = rangeKm;
+    return '${km.toStringAsFixed(0)} km';
+  }
+
+  /// Battery tier: 0=green, 1=amber, 2=red
+  int get batteryTier {
+    if (_batteryLevel <= 0.15) return 2;
+    if (_batteryLevel <= 0.30) return 1;
+    return 0;
+  }
   /// Looks up the Car for the current user vehicle and stores it
   void _syncCurrentCar() {
     if (_userVehicles.isEmpty) {

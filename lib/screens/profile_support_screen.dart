@@ -66,15 +66,6 @@ class ProfileSupportScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: GlassColors.online,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     const Text(
                       'Profile & Support',
                       style: TextStyle(
@@ -160,16 +151,7 @@ class ProfileSupportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Profile & Support',
-              style: TextStyle(
-                color: GlassColors.textPrimary,
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 4),
+
             const Text(
               'Manage your account and get assistance',
               style: TextStyle(
@@ -331,7 +313,7 @@ class ProfileSupportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             Text(
-              'EV RADAR KENYA  -  ${SupportDetails.appVersion}',
+              'EV RADAR  -  VERSION 2.4.1',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: GlassColors.textSecondary,
@@ -342,7 +324,7 @@ class ProfileSupportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Secure Telemetry Gateway - Nairobi, Kenya',
+              'Smart EV tracking, Charging and services',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: GlassColors.textSecondary,

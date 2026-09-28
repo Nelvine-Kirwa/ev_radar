@@ -52,7 +52,32 @@ class GlassDropdown {
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: items.map((item) {
+                  children: [
+                    // Header row with close X
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GestureDetector(
+                            onTap: () => entry.remove(),
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.close,
+                                color: Color(0xFFD32F2F),
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Menu items
+                    ...items.map((item) {
                     final color = item.isDestructive
                         ? const Color(0xFFD32F2F)
                         : Colors.white;
@@ -82,6 +107,7 @@ class GlassDropdown {
                       ),
                     );
                   }).toList(),
+                  ],
                 ),
               ),
             ),
