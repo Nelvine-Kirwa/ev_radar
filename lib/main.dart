@@ -10,6 +10,7 @@ import 'providers/vehicle_provider.dart';
 import 'providers/charging_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/installation_provider.dart';
+import 'providers/user_location_provider.dart';
 import 'providers/notification_provider.dart';
 import 'services/push_notification_service.dart';
 import 'screens/splash_screen.dart';
@@ -52,6 +53,7 @@ class EVRadarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ChargingProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
         ChangeNotifierProvider(create: (_) => InstallationProvider()),
+        ChangeNotifierProvider(create: (_) => UserLocationProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(

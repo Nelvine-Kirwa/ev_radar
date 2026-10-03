@@ -324,14 +324,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               final ul = ctx.watch<UserLocationProvider>();
               final lat = ul.lat;
               final lng = ul.lng;
-              String dt;
-              if (lat != null && lng != null) {
-                final km = s.distanceFrom(lat, lng);
-                dt = km.toStringAsFixed(1) + ' km';
-              } else {
-                dt = '-- km';
-              }
-              return _quickFact('AIR DIST', dt);
+              final dt = (lat != null && lng != null)
+                  ? ' km'
+                  : '-- km';
+              return _quickFact('DISTANCE', dt);
             }),
             const VerticalDivider(color: Color(0xFF1F2937), width: 1),
             _quickFact('PRICE', 'KSh ${s.pricePerKwhKsh}\n/ kWh',
