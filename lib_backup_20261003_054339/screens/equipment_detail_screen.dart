@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/equipment_data.dart';
 import '../models/equipment.dart';
@@ -134,17 +134,6 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
         userPhone: profilePhone,
         equipmentName: widget.equipment.name,
         address: _addressController.text.trim(),
-      );
-    }
-
-    // Notify the client that their booking is confirmed
-    if (bookingId != null) {
-      await NotificationService().notifyBookingConfirmed(
-        userId: user.uid,
-        equipmentName: widget.equipment.name,
-        electricianName: e['name'],
-        address: _addressController.text.trim(),
-        bookingId: bookingId,
       );
     }
 

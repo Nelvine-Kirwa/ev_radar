@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../data/equipment_data.dart';
 import '../models/equipment.dart';
 import 'package:provider/provider.dart';
 import '../providers/installation_provider.dart';
+import '../services/notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/booking.dart';
 import '../providers/auth_provider.dart';
 import 'equipment_detail_screen.dart';
@@ -609,6 +611,29 @@ class _ServicesScreenState extends State<ServicesScreen> {
     );
   }
 
+  Future<void> _notifyCancellation(Booking booking) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('electricians')
+          .where('name', isEqualTo: booking.electricianName)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isEmpty) return;
+      final recipientId = snap.docs.first.id;
+
+      await NotificationService().createNotification(
+        recipientId: recipientId,
+        type: 'BOOKING_CANCELLED',
+        title: 'Booking Cancelled',
+        body:
+            'A booking for ${booking.equipmentName} at ${booking.address} was cancelled. The booking fee will be refunded.',
+        relatedBookingId: booking.id,
+      );
+    } catch (_) {
+      // Silent â€” cancellation already succeeded
+    }
+  }
   Future<void> _confirmCancel(Booking booking) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -696,6 +721,17 @@ class _ServicesScreenState extends State<ServicesScreen> {
     );
 
     final ok = await provider.cancelBooking(booking.id, userId);
+
+    if (ok) {
+      await _notifyCancellation(booking);
+      // Notify client (self)
+      await NotificationService().notifyBookingCancelled(
+        userId: userId,
+        equipmentName: booking.equipmentName,
+        address: booking.address,
+        bookingId: booking.id,
+      );
+    }
 
     if (!mounted) return;
     Navigator.pop(context); // close loading

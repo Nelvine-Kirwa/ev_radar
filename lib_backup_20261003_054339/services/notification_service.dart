@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/notification_item.dart';
 
@@ -28,39 +28,6 @@ class NotificationService {
       debugPrint('[NotificationService] Create ERROR: $e');
     }
   }
-
-  /// Client-side confirmation when they submit a booking.
-  Future<void> notifyBookingConfirmed({
-    required String userId,
-    required String equipmentName,
-    required String electricianName,
-    required String address,
-    required String bookingId,
-  }) =>
-      createNotification(
-        recipientId: userId,
-        type: 'BOOKING_CONFIRMED',
-        title: 'Booking Confirmed',
-        body:
-            'Your $equipmentName installation at $address is scheduled. $electricianName will contact you within 24 hours.',
-        relatedBookingId: bookingId,
-      );
-
-  /// Client-side confirmation when they cancel.
-  Future<void> notifyBookingCancelled({
-    required String userId,
-    required String equipmentName,
-    required String address,
-    required String bookingId,
-  }) =>
-      createNotification(
-        recipientId: userId,
-        type: 'BOOKING_CANCELLED_BY_USER',
-        title: 'Booking Cancelled',
-        body:
-            'Your $equipmentName booking at $address has been cancelled. The KSh 2,500 fee will be refunded.',
-        relatedBookingId: bookingId,
-      );
 
   Future<List<NotificationItem>> getForUser(String userId) async {
     try {

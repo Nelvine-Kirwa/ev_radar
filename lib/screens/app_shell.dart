@@ -1,9 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/dark_bottom_nav.dart';
 import 'cockpit_screen.dart';
 import 'stations_screen.dart';
 import 'planner_screen.dart';
+import '../providers/installation_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import 'services_screen.dart';
 import 'vehicle_picker_screen.dart';
 
@@ -22,6 +26,18 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _index = widget.initialIndex;
+    // Start the notification listener as soon as the shell mounts.
+    // Idempotent: NotificationProvider.listenForUser() is a no-op if
+    // it is already listening for the same user.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = context.read<AuthProvider>().user?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        final notif = context.read<NotificationProvider>();
+        if (notif.lastUserId != uid) {
+          notif.listenForUser(uid);
+        }
+      }
+    });
   }
 
   void _goTo(int i) => setState(() => _index = i);
@@ -59,7 +75,17 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: DarkBottomNav(
         currentIndex: _index,
-        onTap: _goTo,
+        onTap: (i) {
+          _goTo(i);
+          // Refresh installations when Services tab opens
+          if (i == 3) {
+            final auth = context.read<AuthProvider>();
+            final uid = auth.user?.uid;
+            if (uid != null && uid.isNotEmpty) {
+              context.read<InstallationProvider>().loadForUser(uid);
+            }
+          }
+        },
       ),
     );
   }
