@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
+import '../providers/user_location_provider.dart';
 import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
 import '../widgets/radar_overlay.dart';
 import 'station_detail_screen.dart';
+import '../widgets/station_map_view.dart';
 
 class StationsScreen extends StatefulWidget {
   const StationsScreen({super.key});
@@ -29,6 +32,15 @@ class _StationsScreenState extends State<StationsScreen> {
     if (provider.allStations.isEmpty) {
       await provider.loadAllStations();
     }
+
+    // Make sure we have the user's location so distances can render.
+    // If splash's fetch failed silently, this retries on tab entry.
+    if (mounted) {
+      final ul = context.read<UserLocationProvider>();
+      if (!ul.hasLocation && !ul.loading) {
+        unawaited(ul.refresh());
+      }
+    }
   }
 
   @override
@@ -41,6 +53,7 @@ class _StationsScreenState extends State<StationsScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
     final stations = provider.visibleStations;
+    final userLoc = context.watch<UserLocationProvider>();
 
     return Column(
       children: [
@@ -52,7 +65,13 @@ class _StationsScreenState extends State<StationsScreen> {
         Expanded(
           child: Stack(
             children: [
-              _buildMapPlaceholder(provider),
+              // Layer 1: Map (fills entire area, but only the top part is
+              // actually touchable â€” the sheet covers the rest)
+              Positioned.fill(
+                child: _buildMapSection(provider),
+              ),
+
+              // Layer 2: Draggable sheet â€” original valid ratios
               DraggableScrollableSheet(
                 initialChildSize: 0.42,
                 minChildSize: 0.25,
@@ -132,10 +151,15 @@ class _StationsScreenState extends State<StationsScreen> {
                                         ),
                                         itemBuilder: (context, i) {
                                           final s = stations[i];
+                                          final dist = (userLoc.lat != null &&
+                                                  userLoc.lng != null)
+                                              ? s.distanceFrom(
+                                                  userLoc.lat!, userLoc.lng!)
+                                              : null;
                                           return StationListRow(
                                             station: s,
-                                            status:
-                                                provider.pseudoStatus(s),
+                                            status: provider.pseudoStatus(s),
+                                            distanceKm: dist,
                                             onTap: () {
                                               Navigator.push(
                                                 context,
@@ -225,65 +249,28 @@ class _StationsScreenState extends State<StationsScreen> {
     );
   }
 
-  Widget _buildMapPlaceholder(ChargingProvider provider) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1620),
+  Widget _buildMapSection(ChargingProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1F2937)),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(child: CustomPaint(painter: _GridPainter())),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: GestureDetector(
-              onTap: () => provider.loadAllStations(),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C853),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh, color: Colors.black, size: 16),
-                    SizedBox(width: 6),
-                    Text('Refresh Stations',
-                        style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700)),
-                  ],
-                ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1620),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1F2937)),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(painter: _GridPainter()),
               ),
-            ),
+              Positioned.fill(
+                child: StationMapView(),
+              ),
+            ],
           ),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.map_outlined,
-                    color: const Color(0xFF00C853).withOpacity(0.7),
-                    size: 40),
-                const SizedBox(height: 12),
-                const Text('Map view coming soon',
-                    style: TextStyle(
-                        color: Color(0xFF8892B0),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                const Text('Stations list is fully functional below',
-                    style: TextStyle(
-                        color: Color(0xFF4A5568), fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

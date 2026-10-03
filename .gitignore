@@ -44,3 +44,24 @@ serviceAccountKey.json
 # Local seeding scripts (contains token-adjacent tooling)
 scripts/
 stations.json
+
+# ---- session artifacts (do not commit) ----
+_archive/
+lib_backup*/
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*.bak5
+*.bak6
+*.bak7
+*.bak8
+*.bak9
+*.bak10
+*.broken
+.env.bak*
+.env.broken*
+build_log.txt
+crash_log.txt
+maps_err.txt
+wip.diff

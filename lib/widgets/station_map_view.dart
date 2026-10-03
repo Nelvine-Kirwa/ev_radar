@@ -178,9 +178,10 @@ class _StationMapViewState extends State<StationMapView> {
         // ── Green crosshair (bottom-right) — matches nav screen
         if (_mapReady)
           Positioned(
-            right: 12,
-            bottom: 12,
+            top: 16,
+            right: 16,
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: _locating ? null : _goToUser,
               child: Container(
                 width: 44,
