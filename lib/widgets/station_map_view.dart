@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/charging_station.dart';
 import '../providers/charging_provider.dart';
+import '../providers/saved_stations_provider.dart';
 import '../screens/station_detail_screen.dart';
 import '../services/location_service.dart';
 
@@ -146,7 +147,8 @@ class _StationMapViewState extends State<StationMapView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
-    final stations = provider.visibleStations;
+    final saved = context.watch<SavedStationsProvider>();
+    final stations = provider.visibleStationsWith(savedIds: saved.savedIds);
 
     return Stack(
       children: [

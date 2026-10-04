@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/saved_stations_provider.dart';
 import '../widgets/glass_dropdown.dart';
 import '../widgets/glass/glass_scaffold.dart';
 import '../widgets/glass/glass_card.dart';
@@ -132,6 +133,7 @@ class ProfileSupportScreen extends StatelessWidget {
                       onTap: () async {
                         final navigator = Navigator.of(context);
                         context.read<NotificationProvider>().stopListening();
+                        context.read<SavedStationsProvider>().clear();
                         await context.read<AuthProvider>().signOut();
                         navigator.pushAndRemoveUntil(
                           MaterialPageRoute(

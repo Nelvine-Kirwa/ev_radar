@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../providers/installation_provider.dart';
 import '../providers/user_location_provider.dart';
+import '../providers/saved_stations_provider.dart';
 import '../providers/notification_provider.dart';
 import '../models/user_vehicle.dart';
 import 'app_shell.dart';
@@ -52,10 +53,22 @@ class _SplashScreenState extends State<SplashScreen> {
 
       try {
         if (user.uid.isNotEmpty) {
-          await context.read<InstallationProvider>().loadForUser(user.uid);
+          // Wait for the two things the UI actually needs on first paint:
+          // the installations list and the saved stations list.
+          // Hard 3s timeout so slow Firestore never freezes the splash.
+          await Future.wait([
+            context.read<InstallationProvider>().loadForUser(user.uid),
+            context.read<SavedStationsProvider>().loadForUser(user.uid),
+          ]).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => <dynamic>[],
+          );
+
+          // Non-blocking: notifications + GPS keep running in the
+          // background. The UI is already meaningful without them.
           context.read<NotificationProvider>().listenForUser(user.uid);
           context.read<UserLocationProvider>().ensureLoaded();
-}
+        }
       } catch (_) {}
     }
 

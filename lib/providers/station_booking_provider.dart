@@ -12,6 +12,9 @@ class StationBookingProvider extends ChangeNotifier {
   // The current user's own bookings
   List<StationBooking> _myBookings = [];
 
+  // Station ids with an active CONFIRMED booking right now.
+  Set<String> _busyStationIds = {};
+
   bool _loading = false;
   String? _error;
 
@@ -19,7 +22,17 @@ class StationBookingProvider extends ChangeNotifier {
   DateTime get selectedDay => _selectedDay;
   List<StationBooking> get myBookings => _myBookings;
   bool get loading => _loading;
+  Set<String> get busyStationIds => _busyStationIds;
+  bool isStationBusy(String stationId) => _busyStationIds.contains(stationId);
   String? get error => _error;
+
+  /// Fetches the set of stations that are BUSY right now (active booking).
+  /// Called by StationsScreen on tab open and after each booking.
+  Future<void> refreshBusyStations() async {
+    final ids = await _service.getBusyStationIds(DateTime.now());
+    _busyStationIds = ids;
+    notifyListeners();
+  }
 
   void setSelectedDay(DateTime d) {
     _selectedDay = DateTime(d.year, d.month, d.day);

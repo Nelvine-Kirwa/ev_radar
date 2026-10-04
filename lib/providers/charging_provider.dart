@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/charging_station.dart';
 import '../services/charging_station_service.dart';
+import '../utils/connector_utils.dart';
 
 enum StationFilter { all, available, fast, nearby, saved }
 enum SortMode { distance, name }
@@ -25,7 +26,13 @@ class ChargingProvider extends ChangeNotifier {
   StationFilter get activeFilter => _activeFilter;
   SortMode get sortMode => _sortMode;
 
-  List<ChargingStation> get visibleStations {
+  /// Returns the filtered station list. Pass [savedIds] from
+  /// SavedStationsProvider so the "Saved" filter chip works.
+  List<ChargingStation> visibleStationsWith({
+    Set<String>? savedIds,
+    List<String>? carConnectors,
+  }) {
+    final saved = savedIds ?? const <String>{};
     var list = _allStations.where((s) {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
@@ -56,9 +63,19 @@ class ChargingProvider extends ChangeNotifier {
           ];
           return centralNairobi.contains(s.neighborhood);
         case StationFilter.saved:
-          return false;
+          return saved.contains(s.id);
       }
     }).toList();
+
+    // Optional post-filter: only stations compatible with the current
+    // vehicle. Applied AFTER the search/filter switch, and only when
+    // the caller passes carConnectors.
+    if (carConnectors != null && carConnectors.isNotEmpty) {
+      list = list.where((s) => ConnectorUtils.carMatchesStation(
+            carConnectors: carConnectors,
+            stationConnector: s.connectorType,
+          )).toList();
+    }
 
     switch (_sortMode) {
       case SortMode.distance:
@@ -71,6 +88,11 @@ class ChargingProvider extends ChangeNotifier {
 
     return list;
   }
+
+  /// Backwards-compatible getter (no saved filter support).
+  /// Prefer [visibleStationsWith] when you have saved IDs available.
+  List<ChargingStation> get visibleStations =>
+      visibleStationsWith(savedIds: null);
 
   String pseudoStatus(ChargingStation s) {
     final hash = s.id.codeUnits.fold<int>(0, (a, b) => a * 31 + b);

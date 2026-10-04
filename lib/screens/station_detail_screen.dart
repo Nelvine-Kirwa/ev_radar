@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../services/location_service.dart';
-import 'navigation_screen.dart';
 import '../models/charging_station.dart';
 import '../providers/charging_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/saved_stations_provider.dart';
 import '../providers/user_location_provider.dart';
+import '../services/location_service.dart';
+import 'navigation_screen.dart';
+import '../widgets/booking_sheet.dart';
 
 class StationDetailScreen extends StatefulWidget {
   final String stationId;
@@ -17,8 +20,6 @@ class StationDetailScreen extends StatefulWidget {
 }
 
 class _StationDetailScreenState extends State<StationDetailScreen> {
-  bool _saved = false;
-
   @override
   void initState() {
     super.initState();
@@ -31,8 +32,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final provider = context.read<ChargingProvider>();
     await provider.loadStationById(widget.stationId);
 
-    // If the first attempt failed (transient error or rules propagation),
-    // retry once after a short delay.
     if (mounted &&
         provider.currentStation == null &&
         provider.error != null) {
@@ -40,6 +39,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       if (mounted) {
         await provider.loadStationById(widget.stationId);
       }
+    }
+
+    // Load like stats for this station
+    if (mounted) {
+      final uid = context.read<AuthProvider>().user?.uid;
+      await context
+          .read<SavedStationsProvider>()
+          .loadLikeStats(widget.stationId, uid);
     }
   }
 
@@ -79,7 +86,46 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
+  Future<void> _toggleSave(ChargingStation s) async {
+    debugPrint('[ToggleSave] tapped for ${s.id}');
+    final auth = context.read<AuthProvider>();
+    final uid = auth.user?.uid;
+    debugPrint('[ToggleSave] uid=$uid');
+    if (uid == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to save stations.')),
+      );
+      return;
+    }
+    final wasSaved = context.read<SavedStationsProvider>().isSaved(s.id);
+    debugPrint('[ToggleSave] wasSaved=$wasSaved, calling provider...');
+    await context.read<SavedStationsProvider>().toggleSaved(uid, s.id);
+    debugPrint('[ToggleSave] provider call returned');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(wasSaved ? 'Removed from saved' : 'Saved')),
+    );
+  }
+
+  Future<void> _toggleLike(ChargingStation s) async {
+    final auth = context.read<AuthProvider>();
+    final uid = auth.user?.uid;
+    if (uid == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to like stations.')),
+      );
+      return;
+    }
+    await context.read<SavedStationsProvider>().toggleLike(s.id, uid);
+  }
+
   @override
+    /// Opens the slot-picker bottom sheet for [s].
+  Future<void> _openBookingSheet(ChargingStation s) async {
+    await BookingSheet.show(context, s);
+  }
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
     final station = provider.currentStation;
@@ -89,10 +135,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       body: Stack(
         children: [
           provider.isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C853)))
-          : provider.error != null || station == null
-              ? _buildError(provider.error ?? 'Station not found')
-              : _buildContent(station),
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: Color(0xFF00C853)))
+              : provider.error != null || station == null
+                  ? _buildError(provider.error ?? 'Station not found')
+                  : _buildContent(station),
           Positioned(
             top: 0,
             left: 0,
@@ -102,6 +150,54 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 child: _circleButton(
                   icon: Icons.arrow_back,
                   onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Fixed Book button — top-right, mirrors the back button ──
+          Positioned(
+            top: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: GestureDetector(
+                  onTap: station == null
+                      ? null
+                      : () => _openBookingSheet(station),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00C853),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x66000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.event_available,
+                            color: Colors.black, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'Book',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -119,7 +215,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Color(0xFFD32F2F), size: 48),
+              const Icon(Icons.error_outline,
+                  color: Color(0xFFD32F2F), size: 48),
               const SizedBox(height: 16),
               Text(message,
                   textAlign: TextAlign.center,
@@ -197,7 +294,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               ),
             ),
           ),
-
           Positioned(
             left: 16,
             right: 16,
@@ -239,21 +335,65 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 
   Widget _buildActionRow(ChargingStation s) {
+    final saved = context.watch<SavedStationsProvider>();
+    final isSaved = saved.isSaved(s.id);
+    final isLiked = saved.isLiked(s.id);
+    final likeCount = saved.likeCountFor(s.id);
+
     return Row(
       children: [
         _statusPill(s.statusLabel, s.statusTier),
         const Spacer(),
+        // â”€â”€ Save toggle â”€â”€
         _circleButton(
-          icon: _saved ? Icons.bookmark : Icons.bookmark_border,
-          onTap: () => setState(() => _saved = !_saved),
+          icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+          iconColor: isSaved ? const Color(0xFF00C853) : Colors.white,
+          onTap: () => _toggleSave(s),
         ),
         const SizedBox(width: 8),
-        _circleButton(icon: Icons.share_outlined, onTap: () {}),
+        // â”€â”€ Like toggle with count â”€â”€
+        GestureDetector(
+          onTap: () => _toggleLike(s),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.55),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: isLiked ? const Color(0xFFE91E63) : Colors.white,
+                  size: 18,
+                ),
+                if (likeCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '$likeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _circleButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _circleButton({
+    required IconData icon,
+    VoidCallback? onTap,
+    Color iconColor = Colors.white,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -263,7 +403,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           color: Colors.black.withOpacity(0.55),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: iconColor, size: 18),
       ),
     );
   }
@@ -316,23 +456,22 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 
   Widget _buildQuickFacts(ChargingStation s) {
+    final ul = context.watch<UserLocationProvider>();
+    final lat = ul.lat;
+    final lng = ul.lng;
+    String distText;
+    if (lat != null && lng != null) {
+      final km = s.distanceFrom(lat, lng);
+      distText = km.toStringAsFixed(1) + ' km';
+    } else {
+      distText = '-- km';
+    }
+
     return _card(
       child: IntrinsicHeight(
         child: Row(
           children: [
-            Builder(builder: (ctx) {
-              final ul = ctx.watch<UserLocationProvider>();
-              final lat = ul.lat;
-              final lng = ul.lng;
-              String dt;
-              if (lat != null && lng != null) {
-                final km = s.distanceFrom(lat, lng);
-                dt = km.toStringAsFixed(1) + ' km';
-              } else {
-                dt = '-- km';
-              }
-              return _quickFact('AIR DIST', dt);
-            }),
+            _quickFact('AIR DIST', distText),
             const VerticalDivider(color: Color(0xFF1F2937), width: 1),
             _quickFact('PRICE', 'KSh ${s.pricePerKwhKsh}\n/ kWh',
                 valueColor: const Color(0xFF00C853)),
@@ -401,7 +540,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           ),
           const SizedBox(height: 12),
           ...List.generate(s.portsTotal, (i) {
-            // Alternate statuses for a realistic look
             final isAvailable = i < s.portsAvailable;
             final isLast = i == s.portsTotal - 1;
             return Column(
@@ -584,51 +722,24 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     );
   }
 
+  /// Bottom bar: only one wide "Navigate Here" button.
   Widget _buildActionBar(ChargingStation s) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton.icon(
-              onPressed: () => _launchNavigate(s),
-              icon: const Icon(Icons.navigation_outlined, size: 18),
-              label: const Text('Navigate Here',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(27)),
-                elevation: 0,
-              ),
-            ),
-          ),
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton.icon(
+        onPressed: () => _launchNavigate(s),
+        icon: const Icon(Icons.navigation_outlined, size: 18),
+        label: const Text('Navigate Here',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF00C853),
+          foregroundColor: Colors.black,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+          elevation: 0,
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: SizedBox(
-            height: 54,
-            child: OutlinedButton.icon(
-              onPressed: () => setState(() => _saved = !_saved),
-              icon: Icon(
-                  _saved ? Icons.bookmark : Icons.bookmark_border,
-                  size: 18),
-              label: Text(_saved ? 'Saved' : 'Save',
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Color(0xFF1F2937)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(27)),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

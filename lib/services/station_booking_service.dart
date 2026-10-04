@@ -143,6 +143,26 @@ class StationBookingService {
     }
   }
 
+  /// Returns a Set of stationIds that are BUSY right now
+  /// (i.e. have a CONFIRMED booking covering the current moment).
+  /// Used by the Stations list to reflect real availability.
+  Future<Set<String>> getBusyStationIds(DateTime now) async {
+    try {
+      final snap = await _col
+          .where('status', isEqualTo: 'CONFIRMED')
+          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(now))
+          .where('endTime', isGreaterThan: Timestamp.fromDate(now))
+          .get();
+      return snap.docs
+          .map((d) => d.data()['stationId'] as String? ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+    } catch (e) {
+      debugPrint('[StationBookingService] getBusyStationIds ERROR: $e');
+      return <String>{};
+    }
+  }
+
   /// Scans the user's CONFIRMED bookings and marks expired ones.
   /// Called on app open (Station tab entry / splash) since we don't
   /// have a Cloud Function for scheduled expiry.
