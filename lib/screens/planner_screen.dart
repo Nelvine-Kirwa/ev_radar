@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/trip_plan.dart';
 import '../services/trip_planner_service.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../providers/station_booking_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/station_booking.dart';
+import 'my_bookings_screen.dart';
 
 class PlannerScreen extends StatefulWidget {
   final VoidCallback? onStartNavigation;
@@ -17,6 +23,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
   void initState() {
     super.initState();
     _plan = TripPlannerService().getNairobiToMombasa();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBookings();
+    });
   }
 
   @override
@@ -33,6 +42,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 const SizedBox(height: 16),
                 _buildRouteSummary(),
                 const SizedBox(height: 16),
+                _buildBookingsSection(),
                 _buildChargingStops(),
                 const SizedBox(height: 16),
                 _buildTimeline(),
@@ -43,6 +53,134 @@ class _PlannerScreenState extends State<PlannerScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Loads the user's upcoming charging bookings when the Planner opens.
+  Future<void> _loadBookings() async {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    final uid = auth.user?.uid;
+    if (uid == null || uid.isEmpty) return;
+    await context.read<StationBookingProvider>().loadMyBookings(uid);
+  }
+
+  Widget _buildBookingsSection() {
+    return Consumer<StationBookingProvider>(
+      builder: (ctx, bp, _) {
+        final now = DateTime.now();
+        final upcoming = bp.myBookings
+            .where((b) =>
+                b.status == 'CONFIRMED' && b.endTime.isAfter(now))
+            .toList()
+          ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+        return _card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'UPCOMING BOOKINGS',
+                    style: TextStyle(
+                      color: Color(0xFFB8C7DA),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyBookingsScreen(),
+                        ),
+                      ).then((_) => _loadBookings());
+                    },
+                    child: const Text(
+                      'See all >',
+                      style: TextStyle(
+                        color: Color(0xFF00C853),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (upcoming.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No bookings yet',
+                    style: TextStyle(
+                        color: Color(0xFF8892B0), fontSize: 13),
+                  ),
+                )
+              else
+                ...upcoming.take(3).map((b) => _bookingRow(b)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _bookingRow(StationBooking b) {
+    final dateFmt = DateFormat('EEE, d MMM');
+    final timeFmt = DateFormat('h:mm a');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0E1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFF00C853),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  b.stationName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${dateFmt.format(b.startTime)}  ·  ' +
+                      '${timeFmt.format(b.startTime)} – ' +
+                      '${timeFmt.format(b.endTime)}',
+                  style: const TextStyle(
+                    color: Color(0xFF8892B0),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

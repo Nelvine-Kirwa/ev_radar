@@ -12,6 +12,7 @@ import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
 import '../widgets/radar_overlay.dart';
 import 'station_detail_screen.dart';
+import 'my_bookings_screen.dart';
 import '../widgets/station_map_view.dart';
 
 class StationsScreen extends StatefulWidget {
@@ -277,6 +278,42 @@ class _StationsScreenState extends State<StationsScreen> {
           ),
           const SizedBox(width: 8),
           _chip('Saved', StationFilter.saved, provider),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MyBookingsScreen(),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF1F2937)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.event_note,
+                      color: Color(0xFF00C853), size: 14),
+                  SizedBox(width: 6),
+                  Text(
+                    'Bookings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
