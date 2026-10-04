@@ -14,6 +14,8 @@ import 'providers/trip_provider.dart';
 import 'providers/installation_provider.dart';
 import 'providers/user_location_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/saved_stations_provider.dart';
+import 'providers/station_booking_provider.dart';
 import 'services/push_notification_service.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
@@ -64,6 +66,8 @@ class EVRadarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => InstallationProvider()),
         ChangeNotifierProvider(create: (_) => UserLocationProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => SavedStationsProvider()),
+        ChangeNotifierProvider(create: (_) => StationBookingProvider()),
       ],
       child: MaterialApp(
         navigatorKey: rootNavigatorKey,
