@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/charging_station.dart';
 import '../providers/charging_provider.dart';
 import '../providers/user_location_provider.dart';
 import '../providers/saved_stations_provider.dart';
 import '../providers/vehicle_provider.dart';
+import '../providers/station_booking_provider.dart';
 import '../utils/connector_utils.dart';
 import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
@@ -22,9 +24,8 @@ class StationsScreen extends StatefulWidget {
 class _StationsScreenState extends State<StationsScreen> {
   final TextEditingController _searchController = TextEditingController();
 
+  /// When true, only show stations compatible with the user's active vehicle.
   bool _myCarOnly = false;
-
-  /// When true, only show stations whose connectors match the user's current vehicle.
 
   @override
   void initState() {
@@ -40,13 +41,17 @@ class _StationsScreenState extends State<StationsScreen> {
       await provider.loadAllStations();
     }
 
-    // Make sure we have the user's location so distances can render.
-    // If splash's fetch failed silently, this retries on tab entry.
     if (mounted) {
       final ul = context.read<UserLocationProvider>();
       if (!ul.hasLocation && !ul.loading) {
         unawaited(ul.refresh());
       }
+    }
+
+    if (mounted) {
+      unawaited(
+        context.read<StationBookingProvider>().refreshBusyStations(),
+      );
     }
   }
 
@@ -56,12 +61,24 @@ class _StationsScreenState extends State<StationsScreen> {
     super.dispose();
   }
 
+  /// Returns the real status: 'busy' if a booking is active right now,
+  /// otherwise falls back to the pseudo-derived status.
+  String _statusFor(
+    ChargingStation s,
+    ChargingProvider provider,
+    StationBookingProvider bookings,
+  ) {
+    if (bookings.isStationBusy(s.id)) return 'busy';
+    return provider.pseudoStatus(s);
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
     final saved = context.watch<SavedStationsProvider>();
     final userLoc = context.watch<UserLocationProvider>();
     final vehicle = context.watch<VehicleProvider>();
+    final bookings = context.watch<StationBookingProvider>();
     final currentCar = vehicle.currentCar;
 
     final baseStations =
@@ -86,11 +103,9 @@ class _StationsScreenState extends State<StationsScreen> {
         Expanded(
           child: Stack(
             children: [
-              // Layer 1: Map (fills entire area, but only the top part is
               Positioned.fill(
                 child: _buildMapSection(provider),
               ),
-
               DraggableScrollableSheet(
                 initialChildSize: 0.42,
                 minChildSize: 0.25,
@@ -177,7 +192,8 @@ class _StationsScreenState extends State<StationsScreen> {
                                               : null;
                                           return StationListRow(
                                             station: s,
-                                            status: provider.pseudoStatus(s),
+                                            status:
+                                                _statusFor(s, provider, bookings),
                                             distanceKm: dist,
                                             onTap: () {
                                               Navigator.push(

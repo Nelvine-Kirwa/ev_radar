@@ -22,21 +22,26 @@ class StationBookingProvider extends ChangeNotifier {
   DateTime get selectedDay => _selectedDay;
   List<StationBooking> get myBookings => _myBookings;
   bool get loading => _loading;
-  Set<String> get busyStationIds => _busyStationIds;
-  bool isStationBusy(String stationId) => _busyStationIds.contains(stationId);
   String? get error => _error;
 
-  /// Fetches the set of stations that are BUSY right now (active booking).
-  /// Called by StationsScreen on tab open and after each booking.
-  Future<void> refreshBusyStations() async {
-    final ids = await _service.getBusyStationIds(DateTime.now());
-    _busyStationIds = ids;
-    notifyListeners();
-  }
+  Set<String> get busyStationIds => _busyStationIds;
+  bool isStationBusy(String stationId) => _busyStationIds.contains(stationId);
 
   void setSelectedDay(DateTime d) {
     _selectedDay = DateTime(d.year, d.month, d.day);
     notifyListeners();
+  }
+
+  /// Fetches the set of stations that are BUSY right now (active booking).
+  /// Called by StationsScreen on tab open and after each booking.
+  Future<void> refreshBusyStations() async {
+    try {
+      final ids = await _service.getBusyStationIds(DateTime.now());
+      _busyStationIds = ids;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[StationBookingProvider] refreshBusy ERROR: $e');
+    }
   }
 
   /// Load bookings for a station on [_selectedDay].
@@ -72,13 +77,13 @@ class StationBookingProvider extends ChangeNotifier {
   void clear() {
     _dayBookings = [];
     _myBookings = [];
+    _busyStationIds = {};
     notifyListeners();
   }
 
   /// True if [slotStart, slotEnd] is taken by an existing booking.
   bool isSlotTaken(DateTime slotStart, DateTime slotEnd) {
     for (final b in _dayBookings) {
-      // Overlap test
       if (b.startTime.isBefore(slotEnd) && b.endTime.isAfter(slotStart)) {
         return true;
       }
@@ -91,8 +96,7 @@ class StationBookingProvider extends ChangeNotifier {
     return slotStart.isBefore(DateTime.now());
   }
 
-  /// Book a slot. Returns the new booking id, or null if it failed
-  /// (e.g. conflict — checked again on the server just before writing).
+  /// Book a slot. Returns the new booking id, or null on failure.
   Future<String?> bookSlot({
     required String stationId,
     required String stationName,
@@ -101,13 +105,11 @@ class StationBookingProvider extends ChangeNotifier {
     required DateTime start,
     required DateTime end,
   }) async {
-    // Client-side check
     if (isSlotTaken(start, end)) {
       _error = 'That slot was just taken. Pick another.';
       notifyListeners();
       return null;
     }
-    // Server-side check (race protection)
     final conflict = await _service.findConflict(
       stationId: stationId,
       start: start,
@@ -116,7 +118,6 @@ class StationBookingProvider extends ChangeNotifier {
     if (conflict != null) {
       _error = 'That slot was just taken. Pick another.';
       notifyListeners();
-      // Refresh grid
       await loadForStationOnDay(stationId, _selectedDay);
       return null;
     }
@@ -132,6 +133,8 @@ class StationBookingProvider extends ChangeNotifier {
     if (id != null) {
       await loadForStationOnDay(stationId, _selectedDay);
       await loadMyBookings(userId);
+      // Also refresh the Busy flag since we may now be inside an active slot.
+      await refreshBusyStations();
     } else {
       _error = 'Could not create booking. Try again.';
       notifyListeners();
@@ -143,6 +146,7 @@ class StationBookingProvider extends ChangeNotifier {
     final ok = await _service.cancelBooking(bookingId);
     if (ok) {
       await loadMyBookings(userId);
+      await refreshBusyStations();
     }
     return ok;
   }
@@ -151,5 +155,6 @@ class StationBookingProvider extends ChangeNotifier {
   Future<void> expireStaleBookings(String userId) async {
     await _service.expireStaleBookingsForUser(userId);
     await loadMyBookings(userId);
+    await refreshBusyStations();
   }
 }
