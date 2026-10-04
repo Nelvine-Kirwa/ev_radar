@@ -3,6 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
 import '../providers/user_location_provider.dart';
+import '../providers/saved_stations_provider.dart';
+import '../providers/vehicle_provider.dart';
+import '../models/car.dart';
+import '../utils/connector_utils.dart';
+import '../providers/auth_provider.dart';
+import '../providers/vehicle_provider.dart';
+import '../models/car.dart';
+import '../utils/connector_utils.dart';
 import '../widgets/station_filter_chip.dart';
 import '../widgets/station_list_row.dart';
 import '../widgets/radar_overlay.dart';
@@ -18,6 +26,10 @@ class StationsScreen extends StatefulWidget {
 
 class _StationsScreenState extends State<StationsScreen> {
   final TextEditingController _searchController = TextEditingController();
+
+  bool _myCarOnly = false;
+
+  /// When true, only show stations whose connectors match the user's current vehicle.
 
   @override
   void initState() {
@@ -52,8 +64,22 @@ class _StationsScreenState extends State<StationsScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
-    final stations = provider.visibleStations;
+    final saved = context.watch<SavedStationsProvider>();
     final userLoc = context.watch<UserLocationProvider>();
+    final vehicle = context.watch<VehicleProvider>();
+    final currentCar = vehicle.currentCar;
+
+    final baseStations =
+        provider.visibleStationsWith(savedIds: saved.savedIds);
+
+    final stations = _myCarOnly && currentCar != null
+        ? baseStations.where((s) {
+            return ConnectorUtils.carMatchesStation(
+              carConnectors: currentCar.connectorTypes,
+              stationConnector: s.connectorType,
+            );
+          }).toList()
+        : baseStations;
 
     return Column(
       children: [
@@ -66,12 +92,12 @@ class _StationsScreenState extends State<StationsScreen> {
           child: Stack(
             children: [
               // Layer 1: Map (fills entire area, but only the top part is
-              // actually touchable â€” the sheet covers the rest)
+              // actually touchable ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the sheet covers the rest)
               Positioned.fill(
                 child: _buildMapSection(provider),
               ),
 
-              // Layer 2: Draggable sheet â€” original valid ratios
+              // Layer 2: Draggable sheet ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â original valid ratios
               DraggableScrollableSheet(
                 initialChildSize: 0.42,
                 minChildSize: 0.25,
@@ -234,6 +260,12 @@ class _StationsScreenState extends State<StationsScreen> {
           _chip('Fast Charging', StationFilter.fast, provider),
           const SizedBox(width: 8),
           _chip('Nearby', StationFilter.nearby, provider),
+          const SizedBox(width: 8),
+          StationFilterChip(
+            label: 'My Car',
+            isActive: _myCarOnly,
+            onTap: () => setState(() => _myCarOnly = !_myCarOnly),
+          ),
           const SizedBox(width: 8),
           _chip('Saved', StationFilter.saved, provider),
         ],
