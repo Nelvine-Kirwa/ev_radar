@@ -4,7 +4,6 @@ import '../models/booking.dart';
 import '../models/equipment.dart';
 
 class BookingService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final CollectionReference _col =
       FirebaseFirestore.instance.collection('bookings');
 
@@ -62,19 +61,33 @@ class BookingService {
     }
   }
 
-  /// All bookings for a user, most recent first
+  /// All bookings for a user, most recent first.
+  ///
+  /// Reads from the server first so recent status changes (like a
+  /// technician marking a job IN_PROGRESS or COMPLETED) show up
+  /// without needing a full logout. Falls back to cache if the
+  /// server is unreachable.
   Future<List<Booking>> getAllForUser(String userId) async {
     try {
-      debugPrint('[BookingService] Querying bookings for userId: $userId');
+      debugPrint('[BookingService] Querying bookings for userId: $userId (server)');
       final snap = await _col
           .where('userId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
-          .get();
-      debugPrint('[BookingService] Got ${snap.docs.length} docs');
+          .get(const GetOptions(source: Source.server));
+      debugPrint('[BookingService] Got ${snap.docs.length} docs (server)');
       return snap.docs.map((d) => Booking.fromFirestore(d)).toList();
     } catch (e) {
-      debugPrint('[BookingService] ERROR: $e');
-      return [];
+      debugPrint('[BookingService] Server read failed, falling back to cache: $e');
+      try {
+        final cacheSnap = await _col
+            .where('userId', isEqualTo: userId)
+            .orderBy('createdAt', descending: true)
+            .get(const GetOptions(source: Source.cache));
+        return cacheSnap.docs.map((d) => Booking.fromFirestore(d)).toList();
+      } catch (cacheErr) {
+        debugPrint('[BookingService] Cache read failed too: $cacheErr');
+        return [];
+      }
     }
   }
 
