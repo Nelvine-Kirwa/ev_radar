@@ -384,7 +384,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ],
           ),
           const SizedBox(height: 10),
-          _row('Electrician', b.electricianName),
+          _row('Technician', b.electricianName),
           _row('Address', b.address),
           _row('Fee', 'KSh ${b.bookingFeeKsh}'),
           if (canCancel) ...[

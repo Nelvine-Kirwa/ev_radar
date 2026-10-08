@@ -81,6 +81,20 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
+  /// Manual one-shot refresh used by pull-to-refresh on NotificationsScreen.
+  /// Fetches once, replaces _items, and notifies listeners.
+  Future<void> refreshForUser(String userId) async {
+    if (userId.isEmpty) return;
+    try {
+      final fetched = await _service.getForUser(userId);
+      _items = fetched;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[NotifProvider] refreshForUser ERROR: $e');
+    }
+  }
+
   void stopListening() {
     _subscription?.cancel();
     _subscription = null;

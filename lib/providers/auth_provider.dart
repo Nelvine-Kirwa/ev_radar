@@ -44,10 +44,30 @@ class AuthProvider extends ChangeNotifier {
     return 'fleet';
   }
 
+  /// True if the current user is an admin.
+  bool get isAdmin => role == 'admin';
+
+  /// Re-fetch the user's profile from Firestore. Call this when you
+  /// expect the role/name/phone may have changed on the server
+  /// (e.g. after an admin approves a role change).
+  Future<void> refreshProfile() async {
+    final u = _user ?? _service.currentUser;
+    if (u == null) return;
+    try {
+      final fresh = await _service.getUserProfile();
+      if (fresh != null) {
+        _profile = fresh;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   String get roleLabel {
     switch (role) {
+      case 'admin':
+        return 'Administrator';
       case 'technician':
-        return 'Electrician';
+        return 'Technician';
       case 'operator':
         return 'Station Operator';
       case 'user':

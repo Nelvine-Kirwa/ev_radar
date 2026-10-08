@@ -147,6 +147,16 @@ class ChargingProvider extends ChangeNotifier {
     }
   }
 
+  /// Strips pending/declined operator submissions from a station list.
+  /// Only "live" stations (Operational / Busy / Offline / approved / missing status)
+  /// appear on the user-facing map and list.
+  List<ChargingStation> _liveOnly(List<ChargingStation> stations) {
+    return stations.where((s) {
+      final st = s.status.toLowerCase();
+      return st != 'pending' && st != 'declined';
+    }).toList();
+  }
+
   Future<void> loadAllStations() async {
     _isLoading = true;
     _error = null;
@@ -155,14 +165,14 @@ class ChargingProvider extends ChangeNotifier {
     try {
       final cached = await _service.getFromCacheFirst();
       if (cached.isNotEmpty) {
-        _allStations = cached;
+        _allStations = _liveOnly(cached);
         _isLoading = false;
         notifyListeners();
       }
 
       final fresh = await _service.getAll();
       if (fresh.isNotEmpty) {
-        _allStations = fresh;
+        _allStations = _liveOnly(fresh);
         _error = null;
       } else if (_allStations.isEmpty) {
         _error = 'No stations available. Tap refresh to retry.';

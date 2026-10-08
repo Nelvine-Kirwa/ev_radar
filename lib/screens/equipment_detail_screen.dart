@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/equipment_data.dart';
 import '../models/equipment.dart';
@@ -220,7 +220,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
               _buildConfirmButton(),
               const SizedBox(height: 10),
               const Text(
-                'By confirming, you agree to be contacted by an electrician within 24 hours.',
+                'By confirming, you agree to be contacted by a technician within 24 hours.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Color(0xFF8892B0), fontSize: 10, height: 1.4),
@@ -436,7 +436,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('CHOOSE ELECTRICIAN',
+              const Text('CHOOSE TECHNICIAN',
                   style: TextStyle(
                       color: Color(0xFF8892B0),
                       fontSize: 10,

@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
 import '../providers/auth_provider.dart';
+import 'admin_dashboard_screen.dart';
+import 'operator_dashboard_screen.dart';
+import 'technician_dashboard_screen.dart';
 import '../providers/notification_provider.dart';
 import '../providers/saved_stations_provider.dart';
 import '../widgets/glass_dropdown.dart';
@@ -15,8 +18,23 @@ import 'become_technician_screen.dart';
 import 'terms_dialog.dart';
 import 'auth/login_screen.dart';
 
-class ProfileSupportScreen extends StatelessWidget {
+class ProfileSupportScreen extends StatefulWidget {
   const ProfileSupportScreen({super.key});
+
+  @override
+  State<ProfileSupportScreen> createState() => _ProfileSupportScreenState();
+}
+
+class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh the cached profile so admin/technician/operator
+    // roles applied on the server show up immediately.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AuthProvider>().refreshProfile();
+    });
+  }
 
   Future<void> _launch(BuildContext context, String url) async {
     final uri = Uri.parse(url);
@@ -85,18 +103,65 @@ class ProfileSupportScreen extends StatelessWidget {
         ),
         actions: [
           Builder(
-            builder: (ctx) => IconButton(
-              icon: const Icon(Icons.settings_outlined,
-                  color: GlassColors.textPrimary),
-              onPressed: () {
-                final box = ctx.findRenderObject() as RenderBox?;
-                final pos =
-                    box?.localToGlobal(Offset.zero) ?? Offset.zero;
-                GlassDropdown.show(
-                  context: ctx,
-                  position:
-                      Offset(pos.dx, pos.dy + (box?.size.height ?? 40)),
-                  items: [
+            builder: (ctx) {
+              final isAdmin =
+                  context.read<AuthProvider>().isAdmin;
+              return IconButton(
+                icon: const Icon(Icons.settings_outlined,
+                    color: GlassColors.textPrimary),
+                onPressed: () {
+                  final box = ctx.findRenderObject() as RenderBox?;
+                  final pos =
+                      box?.localToGlobal(Offset.zero) ?? Offset.zero;
+                  GlassDropdown.show(
+                    context: ctx,
+                    position:
+                        Offset(pos.dx, pos.dy + (box?.size.height ?? 40)),
+                    items: [
+                      if (isAdmin)
+                      GlassMenuItem(
+                        icon: Icons.admin_panel_settings_outlined,
+                        label: 'Admin',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AdminDashboardScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      if (context.read<AuthProvider>().role == 'technician')
+                        GlassMenuItem(
+                          icon: Icons.handyman_outlined,
+                          label: 'Technician',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TechnicianDashboardScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      if (context.read<AuthProvider>().role == 'operator')
+                        GlassMenuItem(
+                          icon: Icons.storefront_outlined,
+                          label: 'Operator',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const OperatorDashboardScreen(),
+                              ),
+                            );
+                          },
+                        ),
                     GlassMenuItem(
                       icon: Icons.storefront_outlined,
                       label: 'Become Operator',
@@ -145,7 +210,8 @@ class ProfileSupportScreen extends StatelessWidget {
                   ],
                 );
               },
-            ),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

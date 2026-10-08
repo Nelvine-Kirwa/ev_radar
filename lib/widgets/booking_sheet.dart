@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/charging_station.dart';
 import '../models/station_booking.dart';
 import '../providers/auth_provider.dart';
+import '../providers/vehicle_provider.dart';
+import '../services/notification_service.dart';
 import '../providers/station_booking_provider.dart';
 import '../screens/booking_confirmed_screen.dart';
 
@@ -90,6 +93,58 @@ class _BookingSheetState extends State<BookingSheet> {
       return;
     }
 
+    debugPrint('[BookingSheet] about to notify user uid=' + uid + ' type=BOOKING_CONFIRMED');
+
+    // Notify the user: their booking is confirmed.
+    await NotificationService().createNotification(
+      recipientId: uid,
+      type: 'BOOKING_CONFIRMED',
+      title: 'Booking Confirmed',
+      body:
+          'Your charging slot at ${widget.station.name} is booked for ${_slotLabelFor(hour)}.',
+    );
+
+    // Notify the station's operator: a new booking just arrived.
+    try {
+      final stationDoc = await FirebaseFirestore.instance
+          .collection('stations')
+          .doc(widget.station.id)
+          .get();
+      final operatorId = stationDoc.data()?['operatorId'] as String?;
+
+      if (operatorId != null &&
+          operatorId.isNotEmpty &&
+          operatorId != uid) {
+        // Read the CURRENTLY ACTIVE vehicle at booking time.
+        String carLine = '';
+        try {
+          final vp = context.read<VehicleProvider>();
+          final car = vp.currentCar;
+          final plate = vp.currentUserVehicle?.plate;
+          if (car != null) {
+            carLine = car.displayName;
+            if (plate != null && plate.isNotEmpty) {
+              carLine = carLine + ' (' + plate + ')';
+            }
+          }
+        } catch (_) {}
+
+        final contact = email.isEmpty ? '' : '  Contact: ' + email;
+        final bodyText = carLine.isEmpty
+            ? 'A customer booked ${_slotLabelFor(hour)} at ${widget.station.name}.' + contact
+            : carLine + ' booked ${_slotLabelFor(hour)} at ${widget.station.name}.' + contact;
+
+        await NotificationService().createNotification(
+          recipientId: operatorId,
+          type: 'NEW_CHARGING_BOOKING',
+          title: 'New Charging Booking',
+          body: bodyText,
+        );
+      }
+    } catch (_) {
+      // Silent — the booking itself succeeded.
+    }
+
     final confirmed = StationBooking(
       id: id,
       stationId: widget.station.id,
@@ -158,6 +213,15 @@ class _BookingSheetState extends State<BookingSheet> {
             b.endTime.isAfter(start));
   }
 
+  /// Same as [_slotLabel] but callable when state might be mid-update.
+  String _slotLabelFor(int hour) {
+    final start = DateTime(
+        _selectedDay.year, _selectedDay.month, _selectedDay.day, hour);
+    final end = start.add(const Duration(hours: 1));
+    final fmt = DateFormat('h:mm a');
+    return fmt.format(start) + ' - ' + fmt.format(end);
+  }
+
   String _slotLabel(int hour) {
     final start = DateTime(
         _selectedDay.year, _selectedDay.month, _selectedDay.day, hour);
@@ -183,7 +247,7 @@ class _BookingSheetState extends State<BookingSheet> {
           ),
           child: Column(
             children: [
-              // â”€â”€ Handle â”€â”€
+              // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Handle ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 10),
                 width: 40,
@@ -194,7 +258,7 @@ class _BookingSheetState extends State<BookingSheet> {
                 ),
               ),
 
-              // â”€â”€ Header â”€â”€
+              // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Column(
@@ -220,7 +284,7 @@ class _BookingSheetState extends State<BookingSheet> {
                 ),
               ),
 
-              // â”€â”€ Date strip â”€â”€
+              // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Date strip ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
               SizedBox(
                 height: 72,
                 child: ListView.separated(
@@ -290,7 +354,7 @@ class _BookingSheetState extends State<BookingSheet> {
               const SizedBox(height: 8),
               const Divider(color: Color(0xFF1F2937), height: 1),
 
-              // â”€â”€ Slot grid â”€â”€
+              // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Slot grid ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
               Expanded(
                 child: loading
                     ? const Center(
@@ -383,7 +447,7 @@ class _BookingSheetState extends State<BookingSheet> {
                       ),
               ),
 
-              // â”€â”€ Confirm bar â”€â”€
+              // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Confirm bar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
               SafeArea(
                 top: false,
                 child: Container(

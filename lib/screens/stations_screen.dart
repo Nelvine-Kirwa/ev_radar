@@ -38,9 +38,8 @@ class _StationsScreenState extends State<StationsScreen> {
 
   Future<void> _ensureStationsLoaded() async {
     final provider = context.read<ChargingProvider>();
-    if (provider.allStations.isEmpty) {
-      await provider.loadAllStations();
-    }
+    // Always refresh on tab entry so operator status changes propagate.
+    await provider.loadAllStations();
 
     if (mounted) {
       final ul = context.read<UserLocationProvider>();

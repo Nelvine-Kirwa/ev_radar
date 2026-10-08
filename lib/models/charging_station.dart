@@ -89,6 +89,7 @@ class ChargingStation {
 
   // Status pill label
   String get statusLabel {
+    if (status.toLowerCase() == 'busy') return 'BUSY NOW';
     return status.toUpperCase();
   }
 

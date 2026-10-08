@@ -138,7 +138,7 @@ class InstallationHistoryScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(color: Color(0xFF1F2937), height: 1),
           const SizedBox(height: 12),
-          _row('Electrician', b.electricianName),
+          _row('Technician', b.electricianName),
           const SizedBox(height: 6),
           _row('Address', b.address),
           const SizedBox(height: 6),

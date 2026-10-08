@@ -31,6 +31,9 @@ class Booking {
     this.createdAt,
   });
 
+  /// User-facing label — replaces underscores with spaces.
+  String get statusLabel => status.replaceAll('_', ' ');
+
   factory Booking.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Booking(

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../data/equipment_data.dart';
 import '../models/equipment.dart';
 import 'package:provider/provider.dart';
@@ -315,7 +315,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Widget _buildInclusionsCard() {
     const inclusions = [
       'County Government Permit & KPLC Grid Clearance Documentation',
-      'Certified EPRA Class A/B Master Electrician Labor & Diagnostics',
+      'Certified EPRA Class A/B Master Technician Labor & Diagnostics',
       'Type 2 SPDs (Surge Protection Device) & Dedicated RCBO Breaker',
       'Up to 15m Heavy-Duty Armoured Cable Run (indoor/outdoor rated)',
       '1-Year Comprehensive Workmanship & Grid Compliance Warranty',
@@ -386,7 +386,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         'subtitle': 'Free assessment of your panel & location'
       },
       {
-        'title': 'Certified Electrician',
+        'title': 'Certified Technician',
         'subtitle': 'Select your preferred EPRA-licensed installer'
       },
       {
@@ -565,7 +565,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: statusBorder),
                 ),
-                child: Text(booking.status,
+                child: Text(booking.statusLabel,
                     style: TextStyle(
                         color: statusColor,
                         fontSize: 9,

@@ -70,7 +70,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                   children: [
                     _row('Equipment', equipment.name),
                     const SizedBox(height: 12),
-                    _row('Electrician', electricianName),
+                    _row('Technician', electricianName),
                     const SizedBox(height: 12),
                     _row('Address', address),
                     const SizedBox(height: 12),
@@ -109,7 +109,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                     _row('Phone', userPhone.isEmpty ? '--' : userPhone),
                     const SizedBox(height: 12),
                     const Text(
-                      'Your assigned electrician will contact you using these details.',
+                      'Your assigned technician will contact you using these details.',
                       style: TextStyle(
                           color: Color(0xFF4A5568), fontSize: 11),
                     ),

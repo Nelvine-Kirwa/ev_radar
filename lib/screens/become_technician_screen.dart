@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -37,6 +40,40 @@ class _BecomeTechnicianScreenState extends State<BecomeTechnicianScreen> {
     if (!mounted) return;
 
     if (ok) {
+      // Notify all admins.
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final admins = await FirebaseFirestore.instance
+              .collection('users')
+              .where('role', isEqualTo: 'admin')
+              .get();
+          for (final admin in admins.docs) {
+            if (admin.id == user.uid) continue;
+            await NotificationService().createNotification(
+              recipientId: admin.id,
+              type: 'NEW_TECHNICIAN_APPLICATION',
+              title: 'New Technician Application',
+              body: _fullName.text.trim() +
+                  ' applied to become a technician. Open the Admin Dashboard to review.',
+            );
+          }
+
+          // Confirm to the applicant.
+          await NotificationService().createNotification(
+            recipientId: user.uid,
+            type: 'TECHNICIAN_APPLICATION_SUBMITTED',
+            title: 'Application Received',
+            body:
+                'Your application is received, we will review it within 24-72 hours. You will be notified once it''s reviewed.',
+          );
+        }
+      } catch (_) {
+        // Silent — the application itself succeeded.
+      }
+
+      if (!mounted) return;
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -45,8 +82,8 @@ class _BecomeTechnicianScreenState extends State<BecomeTechnicianScreen> {
           title: const Text('Application Submitted',
               style: TextStyle(color: Colors.white)),
           content: const Text(
-            'Your technician application is pending EPRA verification. '
-            'We will review it within 24-48 hours.',
+            'Your application is received, we will review it within 24-72 hours. '
+            'You will be notified once it''s reviewed.',
             style: TextStyle(color: Color(0xFF8892B0)),
           ),
           actions: [
