@@ -7,6 +7,7 @@ import 'admin_dashboard_screen.dart';
 import 'operator_dashboard_screen.dart';
 import 'technician_dashboard_screen.dart';
 import '../providers/notification_provider.dart';
+import '../providers/installation_provider.dart';
 import '../providers/saved_stations_provider.dart';
 import '../widgets/glass_dropdown.dart';
 import '../widgets/glass/glass_scaffold.dart';
@@ -199,6 +200,7 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                         final navigator = Navigator.of(context);
                         context.read<NotificationProvider>().stopListening();
                         context.read<SavedStationsProvider>().clear();
+                        context.read<InstallationProvider>().clear();
                         await context.read<AuthProvider>().signOut();
                         navigator.pushAndRemoveUntil(
                           MaterialPageRoute(

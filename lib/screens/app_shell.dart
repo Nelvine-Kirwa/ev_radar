@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/dark_bottom_nav.dart';
@@ -77,12 +77,12 @@ class _AppShellState extends State<AppShell> {
         currentIndex: _index,
         onTap: (i) {
           _goTo(i);
-          // Refresh installations when Services tab opens
+          // Subscribe to the user's bookings so real-time updates show.
           if (i == 3) {
             final auth = context.read<AuthProvider>();
             final uid = auth.user?.uid;
             if (uid != null && uid.isNotEmpty) {
-              context.read<InstallationProvider>().loadForUser(uid);
+              context.read<InstallationProvider>().subscribeForUser(uid);
             }
           }
         },
