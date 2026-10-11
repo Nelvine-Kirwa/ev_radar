@@ -1,4 +1,4 @@
-import '../models/equipment.dart';
+﻿import '../models/equipment.dart';
 
 const List<Equipment> kHardwareOptions = [
   Equipment(
@@ -35,19 +35,4 @@ const List<Equipment> kHardwareOptions = [
   ),
 ];
 
-class Electricians {
-  static const List<Map<String, dynamic>> available = [
-    {
-      'name': 'Denis Kimtai',
-      'license': 'EPRA/EM/2024/0472',
-      'rating': 4.9,
-      'installations': 128,
-    },
-    {
-      'name': 'Nelvin Kipchirchir',
-      'license': 'EPRA/EM/2023/0189',
-      'rating': 4.6,
-      'installations': 92,
-    },
-  ];
-}
+
