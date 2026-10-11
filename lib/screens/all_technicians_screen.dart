@@ -1,8 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../services/technician_service.dart';
 
-/// Full list of approved technicians (users where role == 'technician').
-/// Shows name, EPRA license, rating, and count of completed installations.
+/// List of approved technicians (users where role == 'technician').
+/// Shows name, EPRA license, aggregate rating, and count of completed
+/// installations. Tapping a row returns the technician to the previous
+/// screen (Book Installation) via Navigator.pop.
 class AllTechniciansScreen extends StatefulWidget {
   const AllTechniciansScreen({super.key});
 
@@ -51,7 +53,7 @@ class _AllTechniciansScreenState extends State<AllTechniciansScreen> {
         backgroundColor: const Color(0xFF0A0E1A),
         elevation: 0,
         title: const Text(
-          'All Technicians',
+          'Technicians',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -82,8 +84,7 @@ class _AllTechniciansScreenState extends State<AllTechniciansScreen> {
                         itemCount: _techs.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: 12),
-                        itemBuilder: (context, i) =>
-                            _techCard(_techs[i]),
+                        itemBuilder: (context, i) => _techCard(_techs[i]),
                       ),
                     ),
     );
@@ -92,64 +93,74 @@ class _AllTechniciansScreenState extends State<AllTechniciansScreen> {
   Widget _techCard(Map<String, dynamic> t) {
     final name = (t['name'] ?? '').toString();
     final license = (t['license'] ?? '').toString();
-    final rating = (t['rating'] as num?)?.toDouble() ?? 5.0;
-    final installs = t['installs'] as int? ?? 0;
+    final rating = (t['rating'] as num?)?.toDouble() ?? 0.0;
+    final ratingCount = (t['ratingCount'] as int?) ?? 0;
+    final installations = (t['installations'] as int?) ?? 0;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.pop(context, t),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1F2937)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0A0E1A),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF1F2937)),
-            ),
-            child: const Icon(Icons.person_outline,
-                color: Color(0xFF8892B0), size: 22),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111827),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF1F2937)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0E1A),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF1F2937)),
+                ),
+                child: const Icon(Icons.person_outline,
+                    color: Color(0xFF8892B0), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(
+                      license +
+                          '  -  ' +
+                          installations.toString() +
+                          ' installations',
+                      style: const TextStyle(
+                          color: Color(0xFF8892B0), fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.star,
+                      color: Color(0xFF00C853), size: 14),
+                  const SizedBox(width: 2),
+                  Text(
+                    ratingCount == 0 ? '--' : rating.toStringAsFixed(1),
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                  (license.isEmpty ? 'EPRA pending' : license) +
-                      '  Â·  ' +
-                      installs.toString() +
-                      ' installations',
-                  style: const TextStyle(
-                      color: Color(0xFF8892B0), fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.star,
-                  color: Color(0xFF00C853), size: 14),
-              const SizedBox(width: 2),
-              Text(rating.toStringAsFixed(1),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

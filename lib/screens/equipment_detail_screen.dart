@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'all_technicians_screen.dart';
 import '../models/equipment.dart';
@@ -483,13 +483,16 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.4)),
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final picked = await Navigator.push<Map<String, dynamic>>(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const AllTechniciansScreen(),
                     ),
                   );
+                  if (picked != null && mounted) {
+                    setState(() => _selectedTechnician = picked);
+                  }
                 },
                 child: const Row(
                   children: [
@@ -534,68 +537,76 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
               return Padding(
                 padding: EdgeInsets.only(
                     bottom: i == visible.length - 1 ? 0 : 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedTechnician = t),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? const Color(0x1A00C853)
-                          : const Color(0xFF0A0E1A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () =>
+                        setState(() => _selectedTechnician = t),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
                         color: selected
-                            ? const Color(0xFF00C853)
-                            : const Color(0xFF1F2937),
-                        width: selected ? 1.4 : 1,
+                            ? const Color(0x1A00C853)
+                            : const Color(0xFF0A0E1A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFF00C853)
+                              : const Color(0xFF1F2937),
+                          width: selected ? 1.4 : 1,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1F2937),
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: const Color(0xFF4A5568)),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1F2937),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: const Color(0xFF4A5568)),
+                            ),
+                            child: const Icon(Icons.person,
+                                color: Color(0xFF8892B0), size: 20),
                           ),
-                          child: const Icon(Icons.person,
-                              color: Color(0xFF8892B0), size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text((t['name'] ?? '').toString(),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text((t['name'] ?? '').toString(),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  (t['license'] ?? '').toString() +
+                                      ' - ' +
+                                      (t['installations'] ?? 0)
+                                          .toString() +
+                                      ' installations',
                                   style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text(
-                                (t['license'] ?? '').toString() +
-                                    ' - ' +
-                                    (t['installations'] ?? 0).toString() +
-                                    ' installations',
-                                style: const TextStyle(
-                                    color: Color(0xFF8892B0), fontSize: 10),
-                              ),
-                            ],
+                                      color: Color(0xFF8892B0),
+                                      fontSize: 10),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const Icon(Icons.star,
-                            color: Color(0xFF00C853), size: 12),
-                        const SizedBox(width: 3),
-                        Text(
-                            (t['rating'] ?? 5.0).toStringAsFixed(1),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700)),
-                      ],
+                          const Icon(Icons.star,
+                              color: Color(0xFF00C853), size: 12),
+                          const SizedBox(width: 3),
+                          Text(
+                              (t['rating'] ?? 5.0).toStringAsFixed(1),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -681,4 +692,3 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     );
   }
 }
-

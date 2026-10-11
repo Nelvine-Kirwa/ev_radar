@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/booking.dart';
 import '../providers/installation_provider.dart';
+import '../services/rating_service.dart';
 
 class InstallationHistoryScreen extends StatelessWidget {
   const InstallationHistoryScreen({super.key});
@@ -40,7 +42,7 @@ class InstallationHistoryScreen extends StatelessWidget {
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 12),
                     itemBuilder: (context, i) =>
-                        _historyCard(provider.history[i]),
+                        _historyCard(context, provider.history[i]),
                   ),
       ),
     );
@@ -71,7 +73,7 @@ class InstallationHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _historyCard(Booking b) {
+  Widget _historyCard(BuildContext context, Booking b) {
     final isCompleted = b.status == 'COMPLETED';
     final statusColor =
         isCompleted ? const Color(0xFF00C853) : const Color(0xFF8892B0);
@@ -144,10 +146,11 @@ class InstallationHistoryScreen extends StatelessWidget {
           const SizedBox(height: 6),
           _row('Price', 'KSh ${b.equipmentPriceKsh}'),
           const SizedBox(height: 6),
-          _row(
-            'Date',
-            _formatDate(b.createdAt),
-          ),
+          _row('Date', _formatDate(b.createdAt)),
+          if (isCompleted && b.electricianName.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _RateButton(booking: b),
+          ],
         ],
       ),
     );
@@ -184,5 +187,204 @@ class InstallationHistoryScreen extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rate button + dialog
+// ---------------------------------------------------------------------------
+
+class _RateButton extends StatefulWidget {
+  final Booking booking;
+  const _RateButton({required this.booking});
+
+  @override
+  State<_RateButton> createState() => _RateButtonState();
+}
+
+class _RateButtonState extends State<_RateButton> {
+  final _ratingService = RatingService();
+  bool _loading = true;
+  int _existingStars = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final stars =
+          await _ratingService.getUserStars(widget.booking.id, uid);
+      if (!mounted) return;
+      setState(() {
+        _existingStars = stars;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _open() async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) => _RatingDialog(
+        technicianName: widget.booking.electricianName,
+        initialStars: _existingStars,
+      ),
+    );
+    if (picked == null) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    try {
+      await _ratingService.submitRating(
+        bookingId: widget.booking.id,
+        technicianName: widget.booking.electricianName,
+        raterId: uid,
+        stars: picked,
+      );
+      if (!mounted) return;
+      setState(() => _existingStars = picked);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Thanks! You rated $picked star(s).')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Rating failed: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        height: 32,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Color(0xFF00C853)),
+          ),
+        ),
+      );
+    }
+
+    final rated = _existingStars > 0;
+    final label = rated
+        ? 'Rated ${'★' * _existingStars}${'☆' * (5 - _existingStars)}'
+        : 'Rate Technician';
+
+    return OutlinedButton.icon(
+      onPressed: _open,
+      icon: Icon(rated ? Icons.check_circle : Icons.star_border,
+          size: 16, color: const Color(0xFF00C853)),
+      label: Text(
+        label,
+        style: const TextStyle(
+            color: Color(0xFF00C853),
+            fontSize: 12,
+            fontWeight: FontWeight.w700),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: Color(0x6600C853)),
+        backgroundColor: const Color(0x1100C853),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      ),
+    );
+  }
+}
+
+class _RatingDialog extends StatefulWidget {
+  final String technicianName;
+  final int initialStars;
+  const _RatingDialog({
+    required this.technicianName,
+    required this.initialStars,
+  });
+
+  @override
+  State<_RatingDialog> createState() => _RatingDialogState();
+}
+
+class _RatingDialogState extends State<_RatingDialog> {
+  late int _stars;
+
+  @override
+  void initState() {
+    super.initState();
+    _stars = widget.initialStars == 0 ? 5 : widget.initialStars;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF111827),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Rate ${widget.technicianName}',
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'How did the installation go?',
+            style: TextStyle(color: Color(0xFF8892B0), fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return IconButton(
+                onPressed: () => setState(() => _stars = star),
+                icon: Icon(
+                  star <= _stars ? Icons.star : Icons.star_border,
+                  color: const Color(0xFF00C853),
+                  size: 34,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$_stars star${_stars == 1 ? '' : 's'}',
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel',
+              style: TextStyle(color: Color(0xFF8892B0))),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _stars),
+          child: const Text('Submit',
+              style: TextStyle(color: Color(0xFF00C853))),
+        ),
+      ],
+    );
   }
 }
