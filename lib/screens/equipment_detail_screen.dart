@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/equipment_data.dart';
+import 'all_technicians_screen.dart';
 import '../models/equipment.dart';
 import '../providers/auth_provider.dart';
 import '../providers/installation_provider.dart';
 import '../services/booking_service.dart';
 import '../services/notification_service.dart';
+import '../services/technician_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/location_service.dart';
 import 'booking_confirmation_screen.dart';
@@ -20,10 +21,19 @@ class EquipmentDetailScreen extends StatefulWidget {
 }
 
 class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _loadTechnicians();
+  }
   final _addressController = TextEditingController(
     text: 'Kilimani, Nairobi',
   );
-  int _selectedElectrician = 0;
+  // The selected technician (from Firestore).
+  Map<String, dynamic>? _selectedTechnician;
+  // Approved technicians list (loaded once, cached).
+  List<Map<String, dynamic>> _technicians = [];
+  bool _techniciansLoading = false;
   bool _isSubmitting = false;
   double? _latitude;
   double? _longitude;
@@ -109,7 +119,14 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final e = Electricians.available[_selectedElectrician];
+    if (_selectedTechnician == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a technician')),
+      );
+      return;
+    }
+
+    final e = _selectedTechnician!;
     final profilePhone = context.read<AuthProvider>().displayPhone;
     final bookingId = await BookingService().createBooking(
       userId: user.uid,
@@ -428,7 +445,30 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     );
   }
 
+  /// Load approved technicians from Firestore (users where role == technician).
+  Future<void> _loadTechnicians() async {
+    if (!mounted) return;
+    setState(() => _techniciansLoading = true);
+    try {
+      final list = await TechnicianService().loadApprovedWithCounts();
+      if (!mounted) return;
+      setState(() {
+        _technicians = list;
+        _techniciansLoading = false;
+        if (_selectedTechnician == null && list.isNotEmpty) {
+          _selectedTechnician = list.first;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _techniciansLoading = false);
+    }
+  }
+
   Widget _buildElectricianPicker() {
+    final maxInline = 5;
+    final visible = _technicians.take(maxInline).toList();
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,7 +484,12 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
                       letterSpacing: 1.4)),
               GestureDetector(
                 onTap: () {
-                  // Future: open full electrician list screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AllTechniciansScreen(),
+                    ),
+                  );
                 },
                 child: const Row(
                   children: [
@@ -461,81 +506,105 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          ...List.generate(Electricians.available.length, (i) {
-            final e = Electricians.available[i];
-            final selected = i == _selectedElectrician;
-            return Padding(
-              padding: EdgeInsets.only(
-                  bottom: i == Electricians.available.length - 1 ? 0 : 8),
-              child: GestureDetector(
-                onTap: () =>
-                    setState(() => _selectedElectrician = i),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0x1A00C853)
-                        : const Color(0xFF0A0E1A),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected
-                          ? const Color(0xFF00C853)
-                          : const Color(0xFF1F2937),
-                      width: selected ? 1.4 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1F2937),
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: const Color(0xFF4A5568)),
-                        ),
-                        child: const Icon(Icons.person,
-                            color: Color(0xFF8892B0), size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(e['name'],
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${e['license']} - ${e['installations']} installations',
-                              style: const TextStyle(
-                                  color: Color(0xFF8892B0), fontSize: 10),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.star,
-                          color: Color(0xFF00C853), size: 12),
-                      const SizedBox(width: 3),
-                      Text('${e['rating']}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700)),
-                    ],
-                  ),
+          if (_techniciansLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFF00C853)),
                 ),
               ),
-            );
-          }),
+            )
+          else if (_technicians.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No technicians available yet',
+                style: TextStyle(color: Color(0xFF8892B0), fontSize: 12),
+              ),
+            )
+          else
+            ...List.generate(visible.length, (i) {
+              final t = visible[i];
+              final selected = _selectedTechnician != null &&
+                  _selectedTechnician!['name'] == t['name'];
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: i == visible.length - 1 ? 0 : 8),
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedTechnician = t),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0x1A00C853)
+                          : const Color(0xFF0A0E1A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFF00C853)
+                            : const Color(0xFF1F2937),
+                        width: selected ? 1.4 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1F2937),
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: const Color(0xFF4A5568)),
+                          ),
+                          child: const Icon(Icons.person,
+                              color: Color(0xFF8892B0), size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text((t['name'] ?? '').toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 2),
+                              Text(
+                                (t['license'] ?? '').toString() +
+                                    ' - ' +
+                                    (t['installations'] ?? 0).toString() +
+                                    ' installations',
+                                style: const TextStyle(
+                                    color: Color(0xFF8892B0), fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.star,
+                            color: Color(0xFF00C853), size: 12),
+                        const SizedBox(width: 3),
+                        Text(
+                            (t['rating'] ?? 5.0).toStringAsFixed(1),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );
   }
-
   Widget _buildRefundNote() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -612,3 +681,4 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
     );
   }
 }
+
