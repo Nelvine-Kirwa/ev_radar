@@ -151,9 +151,12 @@ class ChargingProvider extends ChangeNotifier {
   /// Only "live" stations (Operational / Busy / Offline / approved / missing status)
   /// appear on the user-facing map and list.
   List<ChargingStation> _liveOnly(List<ChargingStation> stations) {
+    // Only these statuses appear on the user-facing map & list.
+    // Everything else (pending / declined / rejected / offline / unknown)
+    // is hidden until the admin takes action.
+    const visible = {'operational', 'busy'};
     return stations.where((s) {
-      final st = s.status.toLowerCase();
-      return st != 'pending' && st != 'declined';
+      return visible.contains(s.status.toLowerCase());
     }).toList();
   }
 

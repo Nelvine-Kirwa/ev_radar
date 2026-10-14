@@ -12,7 +12,7 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFF0A0E1A),
         appBar: AppBar(
@@ -28,6 +28,7 @@ class AdminDashboardScreen extends StatelessWidget {
             unselectedLabelColor: Color(0xFF8892B0),
             tabs: [
               Tab(text: 'Applications'),
+              Tab(text: 'Stations'),
               Tab(text: 'Users'),
               Tab(text: 'Staff'),
             ],
@@ -36,6 +37,7 @@ class AdminDashboardScreen extends StatelessWidget {
         body: const TabBarView(
           children: [
             _ApplicationsTab(),
+            _StationsTab(),
             _UsersTab(),
             _StaffTab(),
           ],
@@ -82,7 +84,7 @@ Widget _emptyState({
 }
 
 // =============================================================
-// TAB 1 — Applications
+// TAB 1 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Applications
 // =============================================================
 class _ApplicationsTab extends StatefulWidget {
   const _ApplicationsTab();
@@ -119,6 +121,10 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
           .collection('technician_applications')
           .where('status', isEqualTo: 'pending')
           .get();
+      final stationSnap = await db
+          .collection('stations')
+          .where('status', isEqualTo: 'pending')
+          .get();
 
       final apps = <_PendingApp>[];
       for (final d in opSnap.docs) {
@@ -126,6 +132,9 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
       }
       for (final d in tecSnap.docs) {
         apps.add(_PendingApp.fromDoc(d, 'technician'));
+      }
+      for (final d in stationSnap.docs) {
+        apps.add(_PendingApp.fromDoc(d, 'station'));
       }
 
       // Sort by submittedAt desc (nulls last)
@@ -155,12 +164,46 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
       'Approve ' +
           app.fullName +
           ' as ' +
-          (app.kind == 'operator' ? 'an operator?' : 'a technician?'),
+          (app.kind == 'operator'
+          ? 'an operator?'
+          : app.kind == 'station'
+              ? 'a station?'
+              : 'a technician?'),
     );
     if (confirmed != true) return;
 
     try {
       final db = FirebaseFirestore.instance;
+
+      // Station approval: just flip status to Operational. No user doc,
+      if (app.kind == 'station') {
+        await app.ref.update({'status': 'Operational'});
+
+        // Notify the operator who owns this station.
+        try {
+          final data = (await app.ref.get()).data() ?? {};
+          final opId = (data['operatorId'] ?? '').toString();
+          if (opId.isNotEmpty) {
+            await NotificationService().createNotification(
+              recipientId: opId,
+              type: 'STATION_APPROVED',
+              title: 'Station Approved',
+              body: app.fullName +
+                  ' has been approved and is now live on EV Radar.',
+            );
+          }
+        } catch (_) {
+          // Silent â€” the approval itself succeeded.
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Approved ' + app.fullName)),
+        );
+        _load();
+        return;
+      }
+
       // Copy identifiers from the application onto the user doc so the
       // approved technician/operator appears correctly elsewhere.
       final userPatch = <String, dynamic>{
@@ -250,6 +293,47 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
     if (confirmed != true) return;
 
     final reason = reasonCtrl.text.trim();
+
+    // Station decline: just set rejected, no notification.
+    // Station decline: hard-delete + notify the operator.
+    if (app.kind == 'station') {
+      try {
+        final data = (await app.ref.get()).data() ?? {};
+        final opId = (data['operatorId'] ?? '').toString();
+
+        await app.ref.delete();
+
+        if (opId.isNotEmpty) {
+          try {
+            await NotificationService().createNotification(
+              recipientId: opId,
+              type: 'STATION_REJECTED',
+              title: 'Station Rejected',
+              body: reason.isEmpty
+                  ? app.fullName +
+                      ' was rejected. Resubmit your application or contact support for details.'
+                  : app.fullName +
+                      ' was rejected. Reason: ' + reason,
+            );
+          } catch (_) {
+            // Silent Ã¢â‚¬â€ the deletion itself succeeded.
+          }
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rejected & deleted ' + app.fullName)),
+        );
+        _load();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reject failed: ' + e.toString())),
+        );
+      }
+      return;
+    }
+
     try {
       await app.ref.update({
         'status': 'declined',
@@ -343,8 +427,13 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
 
   Widget _applicationCard(_PendingApp app) {
     final isOperator = app.kind == 'operator';
-    final badgeColor =
-        isOperator ? const Color(0xFF00C853) : const Color(0xFF4FA3E8);
+    final isStation = app.kind == 'station';
+    final badgeColor = isStation
+        ? const Color(0xFFFFA000)
+        : (isOperator ? const Color(0xFF00C853) : const Color(0xFF4FA3E8));
+    final badgeLabel = isStation
+        ? 'STATION'
+        : (isOperator ? 'OPERATOR' : 'TECHNICIAN');
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -367,7 +456,7 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
                   border: Border.all(color: badgeColor.withOpacity(0.5)),
                 ),
                 child: Text(
-                  isOperator ? 'OPERATOR' : 'TECHNICIAN',
+                  badgeLabel,
                   style: TextStyle(
                     color: badgeColor,
                     fontSize: 10,
@@ -393,11 +482,25 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
                 fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          _row('ID Number', app.idNumber),
-          if (isOperator) _row('Business Permit', app.permitOrLicense),
-          if (!isOperator) _row('EPRA License', app.permitOrLicense),
-          _row('Phone', app.phone),
-          _row('Email', app.email),
+          if (isStation) ...[
+            _row('Operator', app.operatorName),
+            _row('Address', app.address),
+            _row('Location', app.neighborhood),
+            _row('Connector', app.connectorType),
+            _row('Power', app.powerKw > 0
+                ? '${app.powerKw.toStringAsFixed(0)} kW'
+                : ''),
+            _row('Price', app.priceKwh > 0
+                ? 'KSh ${app.priceKwh} / kWh'
+                : ''),
+            _row('Phone', app.phone),
+          ] else ...[
+            _row('ID Number', app.idNumber),
+            if (isOperator) _row('Business Permit', app.permitOrLicense),
+            if (!isOperator) _row('EPRA License', app.permitOrLicense),
+            _row('Phone', app.phone),
+            _row('Email', app.email),
+          ],
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -482,7 +585,7 @@ class _ApplicationsTabState extends State<_ApplicationsTab> {
 
 class _PendingApp {
   final String uid;
-  final String kind; // 'operator' | 'technician'
+  final String kind; // 'operator' | 'technician' | 'station'
   final String fullName;
   final String idNumber;
   final String permitOrLicense;
@@ -490,6 +593,14 @@ class _PendingApp {
   final String email;
   final DateTime? submittedAt;
   final DocumentReference<Map<String, dynamic>> ref;
+
+  // Station-only fields (empty for operator/technician)
+  final String operatorName;
+  final String address;
+  final String neighborhood;
+  final String connectorType;
+  final double powerKw;
+  final int priceKwh;
 
   _PendingApp({
     required this.uid,
@@ -501,11 +612,36 @@ class _PendingApp {
     required this.email,
     required this.submittedAt,
     required this.ref,
+    this.operatorName = '',
+    this.address = '',
+    this.neighborhood = '',
+    this.connectorType = '',
+    this.powerKw = 0,
+    this.priceKwh = 0,
   });
 
   factory _PendingApp.fromDoc(
       QueryDocumentSnapshot<Map<String, dynamic>> d, String kind) {
     final m = d.data();
+    if (kind == 'station') {
+      return _PendingApp(
+        uid: '',
+        kind: 'station',
+        fullName: (m['name'] ?? 'Unknown Station') as String,
+        idNumber: '',
+        permitOrLicense: '',
+        phone: (m['phone'] ?? '') as String,
+        email: '',
+        submittedAt: (m['createdAt'] as Timestamp?)?.toDate(),
+        ref: d.reference,
+        operatorName: (m['operator'] ?? '') as String,
+        address: (m['address'] ?? '') as String,
+        neighborhood: (m['neighborhood'] ?? '') as String,
+        connectorType: (m['connectorType'] ?? '') as String,
+        powerKw: (m['powerKw'] as num?)?.toDouble() ?? 0,
+        priceKwh: (m['pricePerKwhKsh'] as num?)?.toInt() ?? 0,
+      );
+    }
     return _PendingApp(
       uid: (m['uid'] ?? '') as String,
       kind: kind,
@@ -523,7 +659,381 @@ class _PendingApp {
 }
 
 // =============================================================
-// TAB 2 — Users (role 'fleet' or missing)
+// TAB 2 (NEW) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Stations (approved / Operational)
+// =============================================================
+class _StationsTab extends StatefulWidget {
+  const _StationsTab();
+
+  @override
+  State<_StationsTab> createState() => _StationsTabState();
+}
+
+class _StationsTabState extends State<_StationsTab> {
+  bool _loading = true;
+  String _search = '';
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _stations = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      // Admin sees ALL live statuses, not just Operational.
+      final snap = await FirebaseFirestore.instance
+          .collection('stations')
+          .where('status', whereIn: ['Operational', 'Busy', 'Offline', 'approved'])
+          .get();
+      if (!mounted) return;
+      setState(() {
+        _stations = snap.docs;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> get _filtered {
+    final q = _search.trim().toLowerCase();
+    if (q.isEmpty) return _stations;
+    return _stations.where((d) {
+      final m = d.data();
+      final name = (m['name'] ?? '').toString().toLowerCase();
+      final addr = (m['address'] ?? '').toString().toLowerCase();
+      final hood = (m['neighborhood'] ?? '').toString().toLowerCase();
+      final op = (m['operator'] ?? '').toString().toLowerCase();
+      return name.contains(q) ||
+          addr.contains(q) ||
+          hood.contains(q) ||
+          op.contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF00C853)));
+    }
+    if (_stations.isEmpty) {
+      return RefreshIndicator(
+        color: const Color(0xFF00C853),
+        onRefresh: _load,
+        child: _emptyState(
+          icon: Icons.ev_station_outlined,
+          title: 'No Stations',
+          subtitle: 'Stations will appear here once approved.',
+        ),
+      );
+    }
+    final filtered = _filtered;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            onChanged: (v) => setState(() => _search = v),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search by name, address or operator',
+              hintStyle: const TextStyle(color: Color(0xFF4A5568)),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF8892B0)),
+              filled: true,
+              fillColor: const Color(0xFF111827),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF1F2937)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF1F2937)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0x6600C853)),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            color: const Color(0xFF00C853),
+            onRefresh: _load,
+            child: filtered.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 120),
+                      Icon(Icons.search_off, color: Color(0xFF4A5568), size: 48),
+                      SizedBox(height: 16),
+                      Text('No stations match your search',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF8892B0), fontSize: 14)),
+                    ],
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) {
+                      final data = Map<String, dynamic>.from(filtered[i].data());
+                      data['__ref'] = filtered[i].reference;
+                      return _stationCard(data);
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'Busy':
+        return const Color(0xFFFFA000);
+      case 'Offline':
+        return const Color(0xFF8892B0);
+      case 'Operational':
+      case 'approved':
+      default:
+        return const Color(0xFF00C853);
+    }
+  }
+
+  Widget _stationCard(Map<String, dynamic> m) {
+    final name = (m['name'] ?? 'Unnamed Station').toString();
+    final operatorName = (m['operator'] ?? '').toString();
+    final address = (m['address'] ?? '').toString();
+    final neighborhood = (m['neighborhood'] ?? '').toString();
+    final connector = (m['connectorType'] ?? '').toString();
+    final powerKw = (m['powerKw'] as num?)?.toDouble() ?? 0;
+    final priceKwh = (m['pricePerKwhKsh'] as num?)?.toInt() ?? 0;
+    final status = (m['status'] ?? 'Operational').toString();
+    final sColor = _statusColor(status);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700)),
+              ),
+              GestureDetector(
+                onTap: () => _showAdminManageSheet(m),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1A00C853),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0x6600C853)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune, color: Color(0xFF00C853), size: 12),
+                      SizedBox(width: 4),
+                      Text('MANAGE',
+                          style: TextStyle(
+                              color: Color(0xFF00C853),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: sColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: sColor.withOpacity(0.5)),
+            ),
+            child: Text(status.toUpperCase(),
+                style: TextStyle(
+                    color: sColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1)),
+          ),
+          const SizedBox(height: 8),
+          if (operatorName.isNotEmpty)
+            Text('Operator: ' + operatorName,
+                style: const TextStyle(
+                    color: Color(0xFF8892B0), fontSize: 12)),
+          if (address.isNotEmpty)
+            Text(address,
+                style: const TextStyle(
+                    color: Color(0xFF8892B0), fontSize: 12)),
+          if (neighborhood.isNotEmpty)
+            Text(neighborhood,
+                style: const TextStyle(
+                    color: Color(0xFF4A5568), fontSize: 11)),
+          if (connector.isNotEmpty || powerKw > 0 || priceKwh > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                [
+                  if (connector.isNotEmpty) connector,
+                  if (powerKw > 0) powerKw.toStringAsFixed(0) + ' kW',
+                  if (priceKwh > 0) 'KSh ' + priceKwh.toString() + '/kWh',
+                ].join('  -  '),
+                style: const TextStyle(
+                    color: Color(0xFFB8C7DA), fontSize: 11),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAdminManageSheet(Map<String, dynamic> m) async {
+    final name = (m['name'] ?? 'this station').toString();
+    final current = (m['status'] ?? 'Operational').toString();
+    final ref = m['__ref'] as DocumentReference?;
+    if (ref == null) return;
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF111827),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(name,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            _adminManageOption(ctx, 'Operational',
+                Icons.check_circle, const Color(0xFF00C853), current),
+            _adminManageOption(ctx, 'Busy',
+                Icons.access_time, const Color(0xFFFFA000), current),
+            _adminManageOption(ctx, 'Offline',
+                Icons.cancel, const Color(0xFF8892B0), current),
+            const Divider(color: Color(0xFF1F2937), height: 1),
+            ListTile(
+              leading: const Icon(Icons.delete_outline,
+                  color: Color(0xFFD32F2F)),
+              title: const Text('Delete Station',
+                  style: TextStyle(
+                      color: Color(0xFFD32F2F),
+                      fontWeight: FontWeight.w700)),
+              onTap: () => Navigator.pop(ctx, '__delete__'),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+
+    if (action == null) return;
+    if (action == '__delete__') {
+      await _confirmDeleteStation(ref, name);
+      return;
+    }
+    if (action == current) return;
+    try {
+      await ref.update({'status': action});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Station marked as ' + action)),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update failed: ' + e.toString())),
+      );
+    }
+  }
+
+  Widget _adminManageOption(BuildContext ctx, String value, IconData icon,
+      Color color, String current) {
+    final isSelected = value == current;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(value, style: const TextStyle(color: Colors.white)),
+      trailing: isSelected
+          ? const Icon(Icons.check, color: Color(0xFF00C853))
+          : null,
+      onTap: () => Navigator.pop(ctx, value),
+    );
+  }
+
+  Future<void> _confirmDeleteStation(DocumentReference ref, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('Confirm',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Do you want to delete this station? This operation cannot be undone.',
+          style: TextStyle(color: Color(0xFFB8C7DA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF8892B0))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes',
+                style: TextStyle(color: Color(0xFFD32F2F))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.delete();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted ' + name)),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: ' + e.toString())),
+      );
+    }
+  }
+}
+
+// =============================================================
+// TAB 2 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Users (role 'fleet' or missing)
 // =============================================================
 class _UsersTab extends StatefulWidget {
   const _UsersTab();
@@ -602,7 +1112,7 @@ class _UsersTabState extends State<_UsersTab> {
 }
 
 // =============================================================
-// TAB 3 — Staff (role 'operator' or 'technician')
+// TAB 3 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Staff (role 'operator' or 'technician')
 // =============================================================
 class _StaffTab extends StatefulWidget {
   const _StaffTab();
