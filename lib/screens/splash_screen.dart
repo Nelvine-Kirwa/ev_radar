@@ -12,6 +12,7 @@ import '../providers/station_booking_provider.dart';
 import '../providers/notification_provider.dart';
 import '../models/user_vehicle.dart';
 import 'app_shell.dart';
+import 'suspended_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -83,6 +84,21 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     if (!mounted) return;
+
+    // Suspended check — must happen before we show AppShell.
+    if (user != null) {
+      final auth = context.read<AuthProvider>();
+      if (auth.profile == null) {
+        await auth.refreshProfile();
+      }
+      if (auth.suspended) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SuspendedScreen()),
+        );
+        return;
+      }
+    }
 
     final destination = user != null
         ? const AppShell()

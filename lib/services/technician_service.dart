@@ -44,7 +44,12 @@ class TechnicianService {
       counts[n] = (counts[n] ?? 0) + 1;
     }
 
-    final list = techSnap.docs.map((d) {
+    final list = techSnap.docs.where((d) {
+      // Skip suspended technicians.
+      final data = d.data();
+      if (data['suspended'] == true) return false;
+      return true;
+    }).map((d) {
       final data = d.data();
       final name = (data['name'] ?? '').toString();
 

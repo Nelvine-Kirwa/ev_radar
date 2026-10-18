@@ -47,6 +47,10 @@ class AuthProvider extends ChangeNotifier {
   /// True if the current user is an admin.
   bool get isAdmin => role == 'admin';
 
+  /// True if the admin has suspended this account.
+  /// When true, the splash screen routes to SuspendedScreen.
+  bool get suspended => _profile?['suspended'] == true;
+
   /// Re-fetch the user's profile from Firestore. Call this when you
   /// expect the role/name/phone may have changed on the server
   /// (e.g. after an admin approves a role change).
