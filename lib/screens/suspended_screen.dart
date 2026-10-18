@@ -1,6 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'auth/login_screen.dart';
+import '../providers/notification_provider.dart';
+import '../providers/saved_stations_provider.dart';
+import '../providers/installation_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/notification_service.dart';
 
@@ -147,6 +152,40 @@ class _SuspendedScreenState extends State<SuspendedScreen> {
                   ),
                 ),
 
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        context.read<NotificationProvider>().stopListening();
+                        context.read<SavedStationsProvider>().clear();
+                        context.read<InstallationProvider>().clear();
+                        await context.read<AuthProvider>().signOut();
+                        navigator.pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(Icons.login,
+                          color: Color(0xFF00C853), size: 18),
+                      label: const Text(
+                        'Log In with Another Account',
+                        style: TextStyle(
+                            color: Color(0xFF00C853),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0x6600C853)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
             ),
@@ -159,13 +198,8 @@ class _SuspendedScreenState extends State<SuspendedScreen> {
               child: IconButton(
                 icon: const Icon(Icons.arrow_back,
                     color: Colors.white, size: 24),
-                tooltip: 'Back',
                 onPressed: () async {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    await context.read<AuthProvider>().signOut();
-                  }
+                  await SystemNavigator.pop();
                 },
               ),
             ),
