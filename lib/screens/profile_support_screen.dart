@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
@@ -6,6 +7,7 @@ import '../providers/auth_provider.dart';
 import 'admin_dashboard_screen.dart';
 import 'operator_dashboard_screen.dart';
 import 'technician_dashboard_screen.dart';
+import 'suspended_screen.dart';
 import '../providers/notification_provider.dart';
 import '../providers/installation_provider.dart';
 import '../providers/saved_stations_provider.dart';
@@ -27,14 +29,30 @@ class ProfileSupportScreen extends StatefulWidget {
 }
 
 class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
+  String _versionText = '';
+
   @override
   void initState() {
     super.initState();
+    _loadVersion();
     // Refresh the cached profile so admin/technician/operator
     // roles applied on the server show up immediately.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<AuthProvider>().refreshProfile();
     });
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _versionText = 'EV RADAR  -  VERSION ' + info.version + ' (' + info.buildNumber + ')';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _versionText = 'EV RADAR');
+    }
   }
 
   Future<void> _launch(BuildContext context, String url) async {
@@ -139,6 +157,15 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                           label: 'Technician',
                           onTap: () {
                             Navigator.pop(context);
+                            if (context.read<AuthProvider>().suspended) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SuspendedScreen(),
+                                ),
+                              );
+                              return;
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -154,6 +181,15 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                           label: 'Operator',
                           onTap: () {
                             Navigator.pop(context);
+                            if (context.read<AuthProvider>().suspended) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SuspendedScreen(),
+                                ),
+                              );
+                              return;
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -167,6 +203,25 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                       icon: Icons.storefront_outlined,
                       label: 'Become Operator',
                       onTap: () {
+                        final role = context.read<AuthProvider>().role;
+                        final messenger = ScaffoldMessenger.of(context);
+                        if (role == 'admin') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text(
+                                  'Admins cannot submit operator or technician applications.')));
+                          return;
+                        }
+                        if (role == 'operator') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('You are already an operator.')));
+                          return;
+                        }
+                        if (role == 'technician') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text(
+                                  'You are already a technician. Contact support to change roles.')));
+                          return;
+                        }
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -179,6 +234,25 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                       icon: Icons.handyman_outlined,
                       label: 'Become Technician',
                       onTap: () {
+                        final role = context.read<AuthProvider>().role;
+                        final messenger = ScaffoldMessenger.of(context);
+                        if (role == 'admin') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text(
+                                  'Admins cannot submit operator or technician applications.')));
+                          return;
+                        }
+                        if (role == 'technician') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('You are already a technician.')));
+                          return;
+                        }
+                        if (role == 'operator') {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text(
+                                  'You are already an operator. Contact support to change roles.')));
+                          return;
+                        }
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -385,7 +459,7 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
             ),
             const SizedBox(height: 28),
             Text(
-              'EV RADAR  -  VERSION 2.4.1',
+              _versionText,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: GlassColors.textSecondary,

@@ -92,7 +92,9 @@ class _SuspendedScreenState extends State<SuspendedScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
       body: SafeArea(
-        child: Center(
+        child: Stack(
+          children: [
+            Center(
           child: Padding(
             padding: const EdgeInsets.all(28),
             child: Column(
@@ -109,7 +111,7 @@ class _SuspendedScreenState extends State<SuspendedScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Your account has been suspended and access to the app is restricted. Tap below to request a review.',
+                  'Your account has been suspended and access to the app is restricted. Tap the button below to request a review.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: Color(0xFF8892B0), fontSize: 14, height: 1.5),
@@ -144,19 +146,30 @@ class _SuspendedScreenState extends State<SuspendedScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () async {
-                    await context.read<AuthProvider>().signOut();
-                  },
-                  child: const Text('Sign Out',
-                      style: TextStyle(
-                          color: Color(0xFF8892B0),
-                          fontSize: 13)),
-                ),
+
               ],
             ),
-          ),
+            ),
+            ),
+
+            // Top-left exit button
+            Positioned(
+              top: 8,
+              left: 8,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back,
+                    color: Colors.white, size: 24),
+                tooltip: 'Back',
+                onPressed: () async {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    await context.read<AuthProvider>().signOut();
+                  }
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
