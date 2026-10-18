@@ -3,10 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 
-/// Technician dashboard — visible to users with role == 'technician'.
+/// Technician dashboard â€” visible to users with role == 'technician'.
 /// Three tabs:
-///   - Bookings: NEW jobs (SCHEDULED) assigned to me → START
-///   - Ongoing: jobs in progress (IN_PROGRESS) → MARK DONE
+///   - Bookings: NEW jobs (SCHEDULED) assigned to me â†’ START
+///   - Ongoing: jobs in progress (IN_PROGRESS) â†’ MARK DONE
 ///   - Completed: full history (COMPLETED)
 class TechnicianDashboardScreen extends StatelessWidget {
   const TechnicianDashboardScreen({super.key});
@@ -82,7 +82,7 @@ class _TechJobsTabState extends State<_TechJobsTab> {
         return;
       }
 
-      // Read the technician's name — we use it to match bookings.
+      // Read the technician's name â€” we use it to match bookings.
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -109,12 +109,29 @@ class _TechJobsTabState extends State<_TechJobsTab> {
       // Query ONLY this technician's bookings so the read matches
       // the Firestore rule (which allows reading bookings where
       // electricianName == myName).
-      final snap = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('electricianName', isEqualTo: name)
-          .get();
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> snap;
+      try {
+        final q = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('electricianName', isEqualTo: name)
+            .get();
+        snap = q.docs;
+      } on FirebaseException catch (e) {
+        if (e.code == 'permission-denied') {
+          // Firestore rejects queries that match 0 docs when the rule
+          // uses get() in its predicate. Treat as "no jobs".
+          if (!mounted) return;
+          setState(() {
+            _techName = name;
+            _jobs = [];
+            _loading = false;
+          });
+          return;
+        }
+        rethrow;
+      }
 
-      final mine = snap.docs.where((d) {
+      final mine = snap.where((d) {
         final status = (d.data()['status'] ?? '').toString();
         return wantedStatuses.contains(status);
       }).toList();
@@ -214,7 +231,7 @@ class _TechJobsTabState extends State<_TechJobsTab> {
           );
         }
       } catch (_) {
-        // Silent — the status update itself succeeded.
+        // Silent â€” the status update itself succeeded.
       }
 
       if (!mounted) return;
