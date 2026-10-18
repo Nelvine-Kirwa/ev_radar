@@ -6,6 +6,7 @@ import '../home_screen.dart';
 import 'register_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/auth_button.dart';
+import '../splash_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
         (route) => false,
       );
     } else {
