@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ActiveTrip {
   final String destination;
   final double distanceKm;
+  final double originalDistanceKm;
   final int etaMinutes;
   final String originLabel;
   final double destLat;
@@ -12,6 +13,7 @@ class ActiveTrip {
   const ActiveTrip({
     required this.destination,
     required this.distanceKm,
+    required this.originalDistanceKm,
     required this.etaMinutes,
     this.originLabel = 'Current Location',
     this.destLat = 0.0,
@@ -42,6 +44,7 @@ class TripProvider extends ChangeNotifier {
     _activeTrip = const ActiveTrip(
       destination: 'Karen, Nairobi',
       distanceKm: 12,
+      originalDistanceKm: 12,
       etaMinutes: 18,
       destLat: -1.3300,
       destLng: 36.7000,
@@ -49,11 +52,34 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  /// Called from NavigationScreen on each GPS tick.
+  /// remainingKm: distance from current position to destination
+  /// etaMinutes: remaining ETA
+  void updateProgress({
+    required double remainingKm,
+    required int etaMinutes,
+  }) {
+    if (_activeTrip == null) return;
+    final t = _activeTrip!;
+    _activeTrip = ActiveTrip(
+      destination: t.destination,
+      distanceKm: remainingKm,
+      originalDistanceKm: t.originalDistanceKm,
+      etaMinutes: etaMinutes,
+      originLabel: t.originLabel,
+      destLat: t.destLat,
+      destLng: t.destLng,
+    );
+    notifyListeners();
+    _persistTrip(_activeTrip!);
+  }
   Future<void> _persistTrip(ActiveTrip trip) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('active_trip_destination', trip.destination);
       await prefs.setDouble('active_trip_distance', trip.distanceKm);
+      await prefs.setDouble('active_trip_original_distance', trip.originalDistanceKm);
       await prefs.setInt('active_trip_eta', trip.etaMinutes);
       await prefs.setString('active_trip_origin', trip.originLabel);
       await prefs.setDouble('active_trip_lat', trip.destLat);
@@ -66,6 +92,7 @@ class TripProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('active_trip_destination');
       await prefs.remove('active_trip_distance');
+      await prefs.remove('active_trip_original_distance');
       await prefs.remove('active_trip_eta');
       await prefs.remove('active_trip_origin');
       await prefs.remove('active_trip_lat');
@@ -79,6 +106,7 @@ class TripProvider extends ChangeNotifier {
       final dest = prefs.getString('active_trip_destination');
       if (dest == null) return;
       final dist = prefs.getDouble('active_trip_distance') ?? 0;
+      final origDist = prefs.getDouble('active_trip_original_distance') ?? dist;
       final eta = prefs.getInt('active_trip_eta') ?? 0;
       final origin = prefs.getString('active_trip_origin') ?? 'Current Location';
       final lat = prefs.getDouble('active_trip_lat') ?? 0;
@@ -86,6 +114,7 @@ class TripProvider extends ChangeNotifier {
       _activeTrip = ActiveTrip(
         destination: dest,
         distanceKm: dist,
+        originalDistanceKm: origDist,
         etaMinutes: eta,
         originLabel: origin,
         destLat: lat,

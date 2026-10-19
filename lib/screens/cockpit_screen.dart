@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/charging_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/trip_provider.dart';
+import '../providers/battery_tracking_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../widgets/battery_gauge.dart';
 import '../widgets/battery_indicator.dart';
@@ -87,21 +88,31 @@ class _CockpitScreenState extends State<CockpitScreen> {
   }
 
   Widget _buildBatteryCard(VehicleProvider vehicle) {
-    final tier = vehicle.batteryTier;
-    final Color tierColor;
-    switch (tier) {
-      case 2:
-        tierColor = const Color(0xFFD32F2F);
-        break;
-      case 1:
-        tierColor = const Color(0xFFFFA000);
-        break;
-      default:
-        tierColor = const Color(0xFF00C853);
-    }
+    final bt = context.watch<BatteryTrackingProvider>();
+    final hasCar = vehicle.currentCar != null;
 
-    final percent = vehicle.batteryLevel;
-    final rangeText = vehicle.rangeDisplayText;
+    // Effective battery: tracking state overrides static value
+    final effectivePercent =
+        bt.isTracking ? bt.currentPercent : vehicle.batteryLevel;
+
+    final tier = effectivePercent <= 0.15
+        ? 2
+        : effectivePercent <= 0.30
+            ? 1
+            : 0;
+    final Color tierColor = tier == 2
+        ? const Color(0xFFD32F2F)
+        : tier == 1
+            ? const Color(0xFFFFA000)
+            : const Color(0xFF00C853);
+
+    final percent = effectivePercent;
+    final rangeText = hasCar
+        ? (vehicle.maxRangeKm * effectivePercent).toStringAsFixed(0) + ' km'
+        : '-- km';
+
+    // Green line: fill based on current battery % (full when 100%, empty at 0%)
+    final greenLineFill = hasCar ? effectivePercent : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -113,7 +124,6 @@ class _CockpitScreenState extends State<CockpitScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header row: BATTERY label (left) + battery icon (right)
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -127,16 +137,32 @@ class _CockpitScreenState extends State<CockpitScreen> {
                 ),
               ),
               const Spacer(),
-              BatteryIndicator(
-                percent: percent,
-                color: tierColor,
-                width: 92,
-                height: 34,
-              ),
+              hasCar
+                  ? BatteryIndicator(
+                      percent: percent,
+                      color: tierColor,
+                      width: 92,
+                      height: 34,
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A0E1A),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF1F2937)),
+                      ),
+                      child: const Text(
+                        '-- %',
+                        style: TextStyle(
+                            color: Color(0xFF8892B0),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700),
+                      ),
+                    ),
             ],
           ),
           const SizedBox(height: 14),
-          // Gauge with km inside
           Center(
             child: BatteryGauge(
               percent: percent,
@@ -145,18 +171,23 @@ class _CockpitScreenState extends State<CockpitScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          // Tracking row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text('Tracking',
+            children: [
+              const Text('Tracking',
                   style: TextStyle(
                       color: Color(0xFF8892B0), fontSize: 12)),
-              Text('Inactive',
-                  style: TextStyle(
-                      color: Color(0xFF8892B0),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                bt.isTracking ? 'Active' : 'Inactive',
+                style: TextStyle(
+                    color: bt.isTracking
+                        ? const Color(0xFF00C853)
+                        : const Color(0xFF8892B0),
+                    fontSize: 12,
+                    fontWeight: bt.isTracking
+                        ? FontWeight.w700
+                        : FontWeight.w600),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -168,7 +199,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: 0.15,
+              widthFactor: greenLineFill.clamp(0.0, 1.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF00C853),
@@ -301,22 +332,37 @@ class _CockpitScreenState extends State<CockpitScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
+        return Consumer<BatteryTrackingProvider>(
+          builder: (ctx, bt, _) {
+            return StatefulBuilder(
+              builder: (ctx, setSheetState) {
+              bool _showUpdatedBadge = false;
             final pct = (draftValue * 100).round();
             return SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Set Current Battery',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Set Current Battery',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close,
+                              color: Color(0xFFD32F2F), size: 24),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -343,32 +389,105 @@ class _CockpitScreenState extends State<CockpitScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          vp.updateBattery(draftValue);
-                          Navigator.pop(ctx);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C853),
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        child: const Text(
-                          'Update',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w800),
+                    if (_showUpdatedBadge)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.check_circle,
+                                color: Color(0xFF00C853), size: 16),
+                            SizedBox(width: 6),
+                            Text('Updated',
+                                style: TextStyle(
+                                    color: Color(0xFF00C853),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                          ],
                         ),
                       ),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                vp.updateBattery(draftValue);
+                                if (bt.isTracking) {
+                                  await bt.updateCurrentPercent(draftValue);
+                                }
+                                setSheetState(() => _showUpdatedBadge = true);
+                                Future.delayed(const Duration(milliseconds: 1500), () {
+                                  if (ctx.mounted) {
+                                    setSheetState(() => _showUpdatedBadge = false);
+                                  }
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00C853),
+                                foregroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              child: const Text(
+                                'Update',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (bt.isTracking) {
+                                  await bt.pauseTracking();
+                                } else {
+                                  vp.updateBattery(draftValue);
+                                  await bt.startTracking(draftValue);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1F2937),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  side: BorderSide(
+                                    color: bt.isTracking
+                                        ? const Color(0xFFD32F2F)
+                                        : const Color(0xFF00C853),
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                bt.isTracking
+                                    ? 'Pause Tracking'
+                                    : 'Track',
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      ],
                     ),
 
                   ],
                 ),
               ),
+            );
+              },
             );
           },
         );
@@ -432,22 +551,62 @@ class _CockpitScreenState extends State<CockpitScreen> {
                   color: Color(0xFF8892B0), fontSize: 12),
             ),
             const SizedBox(height: 14),
-            Container(
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: 0.65,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
-                    borderRadius: BorderRadius.circular(2),
+            LayoutBuilder(
+              builder: (ctx, constraints) {
+                final maxW = constraints.maxWidth;
+                final progress = trip.originalDistanceKm > 0
+                    ? ((trip.originalDistanceKm - trip.distanceKm) /
+                            trip.originalDistanceKm)
+                        .clamp(0.0, 1.0)
+                    : 0.0;
+                final thumbX = (maxW * progress).clamp(6.0, maxW - 6.0);
+                return SizedBox(
+                  height: 14,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 5,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1F2937),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        top: 5,
+                        child: Container(
+                          height: 4,
+                          width: maxW * progress,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C853),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: thumbX - 6,
+                        top: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C853),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: const Color(0xFF0A0E1A), width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 14),
             Row(

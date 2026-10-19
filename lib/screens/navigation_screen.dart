@@ -4,6 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/charging_station.dart';
 import '../services/route_service.dart';
+import '../providers/trip_provider.dart';
+import 'package:provider/provider.dart';
 
 class NavigationScreen extends StatefulWidget {
   final LatLng origin;
@@ -25,7 +27,7 @@ class NavigationScreen extends StatefulWidget {
         destinationName = null,
         destinationAddress = null;
 
-  /// New place-targeted constructor — takes a free-form destination.
+  /// New place-targeted constructor â€” takes a free-form destination.
   const NavigationScreen.toPlace({
     super.key,
     required this.origin,
@@ -64,6 +66,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   void dispose() {
     _positionSub?.cancel();
+    // If nav screen is closed without ending trip, clear it
+    try { context.read<TripProvider>().endTrip(); } catch (_) {}
     super.dispose();
   }
 
@@ -101,6 +105,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     setState(() => _started = true);
 
+    // Register active trip so Cockpit can reflect it
+    if (_route != null && mounted) {
+      final etaMin = (_route!.durationSeconds / 60).round();
+      context.read<TripProvider>().startTrip(ActiveTrip(
+        destination: widget._destName,
+        distanceKm: _route!.distanceMeters / 1000.0,
+        originalDistanceKm: _route!.distanceMeters / 1000.0,
+        etaMinutes: etaMin,
+        originLabel: 'Current Location',
+        destLat: widget._dest.latitude,
+        destLng: widget._dest.longitude,
+      ));
+    }
+
     _controller?.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(target: _currentPos, zoom: 17, tilt: 45, bearing: 0),
@@ -117,6 +135,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (!mounted) return;
       final here = LatLng(pos.latitude, pos.longitude);
       setState(() => _currentPos = here);
+      // Update TripProvider progress
+      try {
+        final remainingM = Geolocator.distanceBetween(
+          here.latitude, here.longitude,
+          widget._dest.latitude, widget._dest.longitude,
+        );
+        final remainingKm = remainingM / 1000.0;
+        // Rough ETA: remaining / avg speed (assume 60 km/h)
+        final etaMin = (remainingKm / 60.0 * 60).round();
+        context.read<TripProvider>().updateProgress(
+          remainingKm: remainingKm,
+          etaMinutes: etaMin,
+        );
+      } catch (_) {}
       _controller?.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(target: here, zoom: 17, tilt: 45),
@@ -129,6 +161,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _positionSub?.cancel();
     _positionSub = null;
     setState(() => _started = false);
+    // End active trip when navigation stops
+    try { context.read<TripProvider>().endTrip(); } catch (_) {}
     if (_route != null && _controller != null) {
       _controller!.animateCamera(
         CameraUpdate.newLatLngBounds(_route!.bounds, 60),
