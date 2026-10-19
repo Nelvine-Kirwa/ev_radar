@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/car.dart';
 import '../models/user_vehicle.dart';
 import '../services/car_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VehicleProvider extends ChangeNotifier {
   final CarService _carService = CarService();
@@ -107,6 +108,25 @@ class VehicleProvider extends ChangeNotifier {
   void updateBattery(double level) {
     _batteryLevel = level.clamp(0.0, 1.0);
     notifyListeners();
+    _persistBattery(_batteryLevel);
+  }
+
+  Future<void> _persistBattery(double level) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('vehicle_battery_level', level);
+    } catch (_) {}
+  }
+
+  Future<void> loadPersistedBattery() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getDouble('vehicle_battery_level');
+      if (saved != null) {
+        _batteryLevel = saved.clamp(0.0, 1.0);
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   void startTracking() {

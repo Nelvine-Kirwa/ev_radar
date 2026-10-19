@@ -545,7 +545,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
         originName: _fromLabel,
         destinationName: _toLabel,
         vehicleName: car?.displayName ?? 'Tesla Model 3',
-        startSoc: 78,
+        startSoc: (vehicle.batteryLevel * 100).round(),
         allStations: charging.allStations,
         carConnectorTypes: connectors,
       );

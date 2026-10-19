@@ -286,9 +286,102 @@ class _CockpitScreenState extends State<CockpitScreen> {
       plate: userVehicle.plate,
       rangeKm: car.rangeKm,
       onManage: widget.onManageVehicle,
-      onConnect: () {},
+      onConnect: () => _showBatterySlider(context),
     );
   }
+  void _showBatterySlider(BuildContext context) {
+    final vp = context.read<VehicleProvider>();
+    double draftValue = vp.batteryLevel;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF111827),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final pct = (draftValue * 100).round();
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Set Current Battery',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$pct%',
+                      style: TextStyle(
+                        color: pct <= 15
+                            ? const Color(0xFFD32F2F)
+                            : pct <= 30
+                                ? const Color(0xFFFFA000)
+                                : const Color(0xFF00C853),
+                        fontSize: 42,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Slider(
+                      value: draftValue,
+                      min: 0.05,
+                      max: 1.0,
+                      divisions: 95,
+                      activeColor: const Color(0xFF00C853),
+                      inactiveColor: const Color(0xFF1F2937),
+                      onChanged: (v) {
+                        setSheetState(() => draftValue = v);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          vp.updateBattery(draftValue);
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00C853),
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Used to calculate range and planner estimates.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Color(0xFF8892B0), fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildActiveTripCard() {
     final trip = context.watch<TripProvider>().activeTrip;
     final hasTrip = trip != null;
