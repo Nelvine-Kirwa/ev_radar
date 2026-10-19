@@ -11,6 +11,14 @@ import '../scripts/seed_stations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/charging_station.dart';
 import 'station_detail_screen.dart';
+import 'package:geocoding/geocoding.dart';
+import '../services/location_service.dart';
+import '../services/battery_route_planner_service.dart';
+import '../providers/charging_provider.dart';
+import '../providers/vehicle_provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'navigation_screen.dart';
 
 class PlannerScreen extends StatefulWidget {
   final VoidCallback? onStartNavigation;
@@ -21,17 +29,100 @@ class PlannerScreen extends StatefulWidget {
 }
 
 class _PlannerScreenState extends State<PlannerScreen> {
-  late final TripPlan _plan;
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ Planner state ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
+  TripPlan? _plan;
+  bool _planLoading = false;
+
+  String _fromLabel = 'Fetching location...';
+  String _toLabel = 'Mombasa, Mombasa County';
+  double? _fromLat;
+  double? _fromLng;
+  double? _toLat;
+  double? _toLng;
+
+  static const double _mombasaLat = -4.0435;
+  static const double _mombasaLng = 39.6682;
+
+  final LocationService _locationService = LocationService();
+
+  final TextEditingController _toController = TextEditingController();
+
 
   @override
   void initState() {
     super.initState();
-    _plan = TripPlannerService().getNairobiToMombasa();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _toLat = _mombasaLat;
+    _toLng = _mombasaLng;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _loadBookings();
+      await _loadUserLocation();
+      await _restorePlannerState();
     });
   }
 
+  @override
+  void dispose() {
+    _toController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _restorePlannerState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final label = prefs.getString('planner_to_label');
+      final lat = prefs.getDouble('planner_to_lat');
+      final lng = prefs.getDouble('planner_to_lng');
+      if (label != null && lat != null && lng != null) {
+        if (!mounted) return;
+        setState(() {
+          _toLabel = label;
+          _toLat = lat;
+          _toLng = lng;
+          _toController.text = label;
+        });
+        if (_fromLat != null && _fromLng != null) {
+          await _calculateRoute();
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _savePlannerState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('planner_to_label', _toLabel);
+      if (_toLat != null) await prefs.setDouble('planner_to_lat', _toLat!);
+      if (_toLng != null) await prefs.setDouble('planner_to_lng', _toLng!);
+    } catch (_) {}
+  }
+
+  Future<void> _loadUserLocation() async {
+    try {
+      final pos = await _locationService.getCurrentLocation();
+      if (pos == null) {
+        if (mounted) setState(() => _fromLabel = 'Current Location');
+        return;
+      }
+      _fromLat = pos.latitude;
+      _fromLng = pos.longitude;
+      String display = 'Current Location';
+      try {
+        final places = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+        if (places.isNotEmpty) {
+          final p = places.first;
+          final parts = <String>[];
+          if ((p.subLocality ?? '').isNotEmpty) parts.add(p.subLocality!);
+          if ((p.locality ?? '').isNotEmpty) parts.add(p.locality!);
+          if (parts.isNotEmpty) display = 'Current Location - ' + parts.join(', ');
+        }
+      } catch (_) {}
+      if (mounted) setState(() => _fromLabel = display);
+    } catch (_) {
+      if (mounted) setState(() => _fromLabel = 'Current Location');
+    }
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -44,18 +135,33 @@ class _PlannerScreenState extends State<PlannerScreen> {
               children: [
                 _buildTripInput(),
                 const SizedBox(height: 16),
-                _buildRouteSummary(),
-                const SizedBox(height: 16),
-                _buildBookingsSection(),
-                if (context.read<AuthProvider>().role == 'operator')
+                if (_plan == null)
+                  _buildEmptyPlanPlaceholder()
+                else ...[
+                  if (!_plan!.routeViable) ...[
+                    _buildWarningCard(),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildRouteSummary(),
+                  const SizedBox(height: 16),
+                  _buildBookingsSection(),
+                  if (context.read<AuthProvider>().role == 'operator')
+                    _buildSeedStationsButton(),
+                  if (context.read<AuthProvider>().role == 'operator')
+                    _buildClearSeedStationsButton(),
+                  const SizedBox(height: 16),
+                  _buildChargingStops(),
+                  const SizedBox(height: 16),
+                  _buildTimeline(),
+                  const SizedBox(height: 20),
+                  _buildStartNavigationCta(),
+                ],
+                if (_plan == null && context.read<AuthProvider>().role == 'operator') ...[
+                  const SizedBox(height: 16),
                   _buildSeedStationsButton(),
-                if (context.read<AuthProvider>().role == 'operator')
+                  const SizedBox(height: 8),
                   _buildClearSeedStationsButton(),
-                _buildChargingStops(),
-                const SizedBox(height: 16),
-                _buildTimeline(),
-                const SizedBox(height: 20),
-                _buildStartNavigationCta(),
+                ],
               ],
             ),
           ),
@@ -285,8 +391,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${dateFmt.format(b.startTime)}  ·  ' +
-                      '${timeFmt.format(b.startTime)} – ' +
+                  '${dateFmt.format(b.startTime)}  ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·  ' +
+                      '${timeFmt.format(b.startTime)} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ ' +
                       '${timeFmt.format(b.endTime)}',
                   style: const TextStyle(
                     color: Color(0xFF8892B0),
@@ -313,33 +419,76 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
+  Widget _buildEmptyPlanPlaceholder() {
+    return _card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Column(
+          children: const [
+            Icon(Icons.route, color: Color(0xFF4A5568), size: 44),
+            SizedBox(height: 12),
+            Text(
+              'No route calculated yet',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Tap Calculate Route to plan your journey',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF8892B0), fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTripInput() {
+    final vehicle = context.watch<VehicleProvider>();
+    final car = vehicle.currentCar;
+    final carName = car?.displayName ?? 'Tesla Model 3';
+    final soc = _plan?.startBatteryPercent ?? 78;
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _inputRow(Icons.place_outlined, 'FROM', _plan.origin),
+          _inputRow(Icons.place_outlined, 'FROM', _fromLabel),
           const SizedBox(height: 10),
-          _inputRow(Icons.flag_outlined, 'TO', _plan.destination),
+          _toField(),
           const SizedBox(height: 14),
           Row(
             children: [
-              _chip(_plan.vehicleName),
+              _chip(carName),
+              if ((vehicle.currentUserVehicle?.plate ?? '').isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _chip(vehicle.currentUserVehicle!.plate),
+              ],
               const SizedBox(width: 8),
-              _chip('${_plan.startBatteryPercent}%'),
-              const SizedBox(width: 8),
-              _chip(_plan.departureLabel),
+              _chip('$soc%'),
             ],
           ),
           const SizedBox(height: 14),
           SizedBox(
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.route, size: 18),
-              label: const Text(
-                'Calculate Route',
-                style: TextStyle(
+              onPressed: _planLoading ? null : _calculateRoute,
+              icon: _planLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Icon(Icons.route, size: 18),
+              label: Text(
+                _planLoading ? 'Calculating...' : 'Calculate Route',
+                style: const TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w700),
               ),
               style: ElevatedButton.styleFrom(
@@ -355,6 +504,147 @@ class _PlannerScreenState extends State<PlannerScreen> {
         ],
       ),
     );
+  }
+
+
+  Future<void> _calculateRoute() async {
+    if (_fromLat == null || _fromLng == null ||
+        _toLat == null || _toLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiting for location...')),
+      );
+      return;
+    }
+
+    setState(() {
+      _plan = null;
+      _planLoading = true;
+    });
+
+    try {
+      final charging = context.read<ChargingProvider>();
+      final vehicle = context.read<VehicleProvider>();
+
+      if (charging.allStations.isEmpty) {
+        await charging.loadAllStations();
+      }
+
+      final car = vehicle.currentCar;
+      final connectors = car?.connectorTypes ?? const ['Type 2'];
+
+      final plan = await BatteryRoutePlannerService().planRoute(
+        origin: LatLng(_fromLat!, _fromLng!),
+        destination: LatLng(_toLat!, _toLng!),
+        originName: _fromLabel,
+        destinationName: _toLabel,
+        vehicleName: car?.displayName ?? 'Tesla Model 3',
+        startSoc: 78,
+        allStations: charging.allStations,
+        carConnectorTypes: connectors,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _plan = plan;
+        _planLoading = false;
+      });
+      await _savePlannerState();
+
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _planLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Plan failed: $e')),
+      );
+    }
+  }
+
+  Widget _toField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0E1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.flag_outlined,
+              color: Color(0xFF00C853), size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('TO',
+                    style: TextStyle(
+                        color: Color(0xFF8892B0),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.4)),
+                const SizedBox(height: 2),
+                TextField(
+                  controller: _toController,
+                  onSubmitted: _onDestinationTyped,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Type a destination...',
+                    hintStyle: TextStyle(
+                        color: Color(0xFF4A5568),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onDestinationTyped(String raw) async {
+    final q = raw.trim();
+    if (q.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _planLoading = true;
+      _plan = null;
+    });
+    try {
+      final results = await locationFromAddress(q);
+      if (results.isEmpty) {
+        if (!mounted) return;
+        setState(() => _planLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Destination "' + q + '" not found')),
+        );
+        return;
+      }
+      final loc = results.first;
+      if (!mounted) return;
+      setState(() {
+        _toLabel = q;
+        _toLat = loc.latitude;
+        _toLng = loc.longitude;
+      });
+      await _savePlannerState();
+      await _calculateRoute();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _planLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not find "' + q + '": ' + e.toString())),
+      );
+    }
   }
 
   Widget _inputRow(IconData icon, String label, String value) {
@@ -409,6 +699,61 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
+  Widget _buildWarningCard() {
+    final warning = _plan?.depletionWarning ?? 'This route is not viable with your current battery.';
+    return _card(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0x1AD32F2F),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFD32F2F),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Route Not Viable',
+                  style: TextStyle(
+                      color: Color(0xFFD32F2F),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  warning,
+                  style: const TextStyle(
+                      color: Color(0xFFB8C7DA),
+                      fontSize: 12,
+                      height: 1.45),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Charge before departing or choose a closer destination.',
+                  style: TextStyle(
+                      color: Color(0xFF8892B0),
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRouteSummary() {
     return _card(
       child: Column(
@@ -422,7 +767,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
-              if (_plan.routeViable)
+              if (_plan!.routeViable)
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
@@ -443,12 +788,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
           Row(
             children: [
               Expanded(
-                child: _summaryBlock('${_plan.distanceKm} km', '5h 45m'),
+                child: _summaryBlock('${_plan!.distanceKm} km', '5h 45m'),
               ),
               Expanded(
                 child: _summaryBlock(
-                  '${_plan.stopsCount} stop',
-                  '${_plan.totalChargingMin} min',
+                  '${_plan!.stopsCount} stop',
+                  '${_plan!.totalChargingMin} min',
                   alignEnd: true,
                 ),
               ),
@@ -458,13 +803,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _projectionValue('START', '${_plan.startBatteryPercent}%',
+              _projectionValue('START', '${_plan!.startBatteryPercent}%',
                   valueColor: Colors.white),
               _projectionValue(
-                  'ON ARRIVAL', '${_plan.arrivalBatteryPercent}%',
+                  'ON ARRIVAL', '${_plan!.arrivalBatteryPercent}%',
                   valueColor: const Color(0xFF00C853)),
               _projectionValue(
-                  'ENERGY NEEDED', '${_plan.energyNeededKwh} kWh',
+                  'ENERGY NEEDED', '${_plan!.energyNeededKwh} kWh',
                   valueColor: Colors.white),
             ],
           ),
@@ -533,7 +878,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   color: const Color(0xFF1F2937),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${_plan.stopsCount} stop',
+                child: Text('${_plan!.stopsCount} stop',
                     style: const TextStyle(
                         color: Color(0xFF8892B0),
                         fontSize: 10,
@@ -542,7 +887,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          ..._plan.chargingStops.map((s) => _stopCard(s)),
+          ..._plan!.chargingStops.map((s) => _stopCard(s)),
           const Divider(color: Color(0xFF1F2937), height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -550,7 +895,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               const Text('Estimated charging cost',
                   style: TextStyle(
                       color: Color(0xFF8892B0), fontSize: 12)),
-              Text('KSh ${_plan.estimatedTotalCostKsh}',
+              Text('KSh ${_plan!.estimatedTotalCostKsh}',
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
@@ -563,7 +908,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _stopCard(ChargingStop s) {
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openStationByName(s.stationName),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF0A0E1A),
@@ -620,7 +970,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
           SizedBox(
             height: 32,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () => _openStationByName(s.stationName),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFF00C853)),
                 shape: RoundedRectangleBorder(
@@ -636,7 +986,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
           ),
         ],
       ),
-    );
+      ),
+    ),
+  );
   }
 
   Widget _buildTimeline() {
@@ -650,9 +1002,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
-          ...List.generate(_plan.timelineSteps.length, (i) {
-            final step = _plan.timelineSteps[i];
-            final isLast = i == _plan.timelineSteps.length - 1;
+          ...List.generate(_plan!.timelineSteps.length, (i) {
+            final step = _plan!.timelineSteps[i];
+            final isLast = i == _plan!.timelineSteps.length - 1;
             return _timelineRow(step, isLast);
           }),
         ],
@@ -721,6 +1073,43 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
+  Future<void> _startTripNavigation() async {
+    if (_plan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calculate a route first')),
+      );
+      return;
+    }
+    if (!_plan!.routeViable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_plan!.depletionWarning ??
+              'Cannot start - check the route warning'),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
+      );
+      return;
+    }
+    if (_fromLat == null || _fromLng == null ||
+        _toLat == null || _toLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiting for location...')),
+      );
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NavigationScreen.toPlace(
+          origin: LatLng(_fromLat!, _fromLng!),
+          destinationLatLng: LatLng(_toLat!, _toLng!),
+          destinationName: _toLabel,
+          destinationAddress: 'Trip destination',
+        ),
+      ),
+    );
+  }
+
   Widget _buildStartNavigationCta() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -728,11 +1117,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
         SizedBox(
           height: 54,
           child: ElevatedButton.icon(
-            onPressed: () {
-              if (widget.onStartNavigation != null) {
-                widget.onStartNavigation!();
-              }
-            },
+            onPressed: _startTripNavigation,
             icon: const Icon(Icons.navigation_outlined, size: 18),
             label: const Text(
               'START NAVIGATION',

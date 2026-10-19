@@ -7,13 +7,38 @@ import '../services/route_service.dart';
 
 class NavigationScreen extends StatefulWidget {
   final LatLng origin;
-  final ChargingStation destination;
 
+  // Station flow
+  final ChargingStation? destination;
+
+  // Place flow (arbitrary lat/lng + name)
+  final LatLng? destinationLatLng;
+  final String? destinationName;
+  final String? destinationAddress;
+
+  /// Existing station-targeted constructor
   const NavigationScreen({
     super.key,
     required this.origin,
     required this.destination,
-  });
+  })  : destinationLatLng = null,
+        destinationName = null,
+        destinationAddress = null;
+
+  /// New place-targeted constructor — takes a free-form destination.
+  const NavigationScreen.toPlace({
+    super.key,
+    required this.origin,
+    required LatLng this.destinationLatLng,
+    required String this.destinationName,
+    this.destinationAddress,
+  }) : destination = null;
+
+  // Unified accessors used throughout the state
+  LatLng get _dest =>
+      destinationLatLng ?? LatLng(destination!.lat, destination!.lng);
+  String get _destName => destinationName ?? destination!.name;
+  String get _destAddress => destinationAddress ?? destination!.address;
 
   @override
   State<NavigationScreen> createState() => _NavigationScreenState();
@@ -47,10 +72,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
       _loading = true;
       _error = null;
     });
-    final dest = LatLng(widget.destination.lat, widget.destination.lng);
     final result = await RouteService().getRoute(
       origin: _currentPos,
-      destination: dest,
+      destination: widget._dest,
     );
     if (!mounted) return;
     setState(() {
@@ -126,12 +150,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   double _remainingMeters() {
-    final dest = LatLng(widget.destination.lat, widget.destination.lng);
     return Geolocator.distanceBetween(
       _currentPos.latitude,
       _currentPos.longitude,
-      dest.latitude,
-      dest.longitude,
+      widget._dest.latitude,
+      widget._dest.longitude,
     );
   }
 
@@ -163,22 +186,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
       ),
       Marker(
         markerId: const MarkerId('__dest__'),
-        position: LatLng(widget.destination.lat, widget.destination.lng),
+        position: widget._dest,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(title: widget.destination.name),
+        infoWindow: InfoWindow(title: widget._destName),
       ),
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final dest = LatLng(widget.destination.lat, widget.destination.lng);
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: dest, zoom: 13),
+            initialCameraPosition:
+                CameraPosition(target: widget._dest, zoom: 13),
             markers: _markers(),
             polylines: _polylines(),
             myLocationEnabled: true,
@@ -193,7 +216,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
             padding: EdgeInsets.only(bottom: _started ? 160 : 220),
           ),
 
-          // Back button (top-left)
+          // Back button
           Positioned(
             top: 0,
             left: 0,
@@ -220,7 +243,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
             ),
           ),
 
-          // Recenter FAB (bottom-right, stacked on top of info panel)
+          // Recenter FAB
           Positioned(
             right: 16,
             bottom: _started ? 190 : 250,
@@ -261,7 +284,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.destination.name,
+                      widget._destName,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -270,7 +293,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.destination.address,
+                      widget._destAddress,
                       style: const TextStyle(
                         color: Color(0xFF8892B0),
                         fontSize: 12,
@@ -323,7 +346,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           const SizedBox(width: 24),
                           _metric(
                             'TO',
-                            widget.destination.name.split(' ').first,
+                            widget._destName.split(' ').first,
                             Colors.white,
                           ),
                           const Spacer(),

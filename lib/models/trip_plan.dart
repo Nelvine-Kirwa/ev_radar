@@ -57,6 +57,7 @@ class TripPlan {
   final int arrivalBatteryPercent;
   final int energyNeededKwh;
   final bool routeViable;
+  final String? depletionWarning;
   final List<ElevationPoint> elevationProfile;
   final String totalAscentLabel;
   final String totalDescentLabel;
@@ -79,6 +80,7 @@ class TripPlan {
     required this.arrivalBatteryPercent,
     required this.energyNeededKwh,
     required this.routeViable,
+    this.depletionWarning,
     required this.elevationProfile,
     required this.totalAscentLabel,
     required this.totalDescentLabel,
