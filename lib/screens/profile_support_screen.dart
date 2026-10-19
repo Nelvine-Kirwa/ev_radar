@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/constants.dart';
 import '../providers/auth_provider.dart';
+import '../providers/vehicle_provider.dart';
+import '../providers/trip_provider.dart';
+import '../providers/station_booking_provider.dart';
 import 'admin_dashboard_screen.dart';
 import 'operator_dashboard_screen.dart';
 import 'technician_dashboard_screen.dart';
@@ -272,9 +275,13 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                       isDestructive: true,
                       onTap: () async {
                         final navigator = Navigator.of(context);
+                        // Clear all user-scoped state before signing out
                         context.read<NotificationProvider>().stopListening();
                         context.read<SavedStationsProvider>().clear();
                         context.read<InstallationProvider>().clear();
+                        context.read<VehicleProvider>().clear();
+                        context.read<TripProvider>().endTrip();
+                        try { context.read<StationBookingProvider>().clear(); } catch (_) {}
                         await context.read<AuthProvider>().signOut();
                         navigator.pushAndRemoveUntil(
                           MaterialPageRoute(

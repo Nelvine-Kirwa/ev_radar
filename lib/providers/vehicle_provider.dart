@@ -165,4 +165,23 @@ class VehicleProvider extends ChangeNotifier {
       _currentCar = null;
     }
   }
+
+  /// Clear all user-scoped state. Called on sign-out so the next
+  /// user doesn't see this user's vehicles, battery, or index.
+  Future<void> clear() async {
+    _userVehicles = [];
+    _currentVehicleIndex = 0;
+    _currentCar = null;
+    _batteryLevel = 0.78;
+    _isTracking = false;
+    notifyListeners();
+    await _clearPersistedBattery();
+  }
+
+  Future<void> _clearPersistedBattery() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('vehicle_battery_level');
+    } catch (_) {}
+  }
 }
