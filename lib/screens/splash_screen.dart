@@ -9,6 +9,7 @@ import '../providers/installation_provider.dart';
 import '../providers/user_location_provider.dart';
 import '../providers/saved_stations_provider.dart';
 import '../providers/station_booking_provider.dart';
+import '../providers/trip_provider.dart';
 import '../providers/notification_provider.dart';
 import '../models/user_vehicle.dart';
 import 'app_shell.dart';
@@ -62,6 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
           await Future.wait([
             context.read<InstallationProvider>().loadForUser(user.uid),
             context.read<SavedStationsProvider>().loadForUser(user.uid),
+            context.read<TripProvider>().loadPersistedTrip(),
           ]).timeout(
             const Duration(seconds: 3),
             onTimeout: () => <dynamic>[],
