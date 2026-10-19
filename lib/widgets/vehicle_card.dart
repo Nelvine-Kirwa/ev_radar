@@ -152,7 +152,7 @@ class VehicleCard extends StatelessWidget {
                         color: const Color(0xFF00C853), width: 1.2),
                   ),
                   child: const Text(
-                    'Connect',
+                    'Battery',
                     style: TextStyle(
                       color: Color(0xFF00C853),
                       fontSize: 12,

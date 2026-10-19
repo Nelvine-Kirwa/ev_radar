@@ -450,7 +450,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final vehicle = context.watch<VehicleProvider>();
     final car = vehicle.currentCar;
     final carName = car?.displayName ?? 'Tesla Model 3';
-    final soc = _plan?.startBatteryPercent ?? 78;
+    final soc = (vehicle.batteryLevel * 100).round();
 
     return _card(
       child: Column(

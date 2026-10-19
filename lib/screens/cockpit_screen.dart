@@ -359,19 +359,13 @@ class _CockpitScreenState extends State<CockpitScreen> {
                           ),
                         ),
                         child: const Text(
-                          'Save',
+                          'Update',
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Used to calculate range and planner estimates.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Color(0xFF8892B0), fontSize: 11),
-                    ),
+
                   ],
                 ),
               ),
