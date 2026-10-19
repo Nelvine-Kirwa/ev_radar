@@ -92,16 +92,29 @@ class BatteryRoutePlannerService {
         break;
       }
 
-      // Find furthest reachable station strictly ahead of currentPos
+      // Prefer stations where we arrive with a comfortable buffer.
+      // Strategy: in order, try arrival thresholds [15%, 10%, 5%].
+      // Within the same threshold, pick the furthest reachable.
+      const preferredArrivalSoc = [15, 10, 5];
       _StationProjection? bestStop;
       int bestIdx = -1;
-      for (int i = lastStopIdx + 1; i < candidates.length; i++) {
-        final c = candidates[i];
-        if (c.alongKm <= currentPosKm + 1.0) continue;  // at or behind us
-        final distFromHere = c.alongKm - currentPosKm;
-        if (distFromHere > maxRangeKm - _safetyMarginKm()) break;  // too far
-        bestStop = c;
-        bestIdx = i;
+
+      for (final minSoc in preferredArrivalSoc) {
+        for (int i = lastStopIdx + 1; i < candidates.length; i++) {
+          final c = candidates[i];
+          if (c.alongKm <= currentPosKm + 1.0) continue;
+          final distFromHere = c.alongKm - currentPosKm;
+          if (distFromHere > maxRangeKm - _safetyMarginKm()) break;
+
+          // Estimate arrival SOC at this stop
+          final socDrop = _socDrop(distFromHere);
+          final arrivalSoc = currentSoc - socDrop;
+          if (arrivalSoc < minSoc) continue;  // too tight, skip
+
+          bestStop = c;
+          bestIdx = i;
+        }
+        if (bestStop != null) break;  // found a good one at this threshold
       }
 
       if (bestStop == null) {
