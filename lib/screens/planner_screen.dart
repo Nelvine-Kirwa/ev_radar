@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/trip_plan.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../scripts/seed_stations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'station_detail_screen.dart';
 import 'package:geocoding/geocoding.dart';
@@ -137,22 +135,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   ],
                   _buildRouteSummary(),
                   const SizedBox(height: 16),
-                  if (context.read<AuthProvider>().role == 'operator')
-                    _buildSeedStationsButton(),
-                  if (context.read<AuthProvider>().role == 'operator')
-                    _buildClearSeedStationsButton(),
                   const SizedBox(height: 16),
                   _buildChargingStops(),
                   const SizedBox(height: 16),
                   _buildTimeline(),
                   const SizedBox(height: 20),
                   _buildStartNavigationCta(),
-                ],
-                if (_plan == null && context.read<AuthProvider>().role == 'operator') ...[
-                  const SizedBox(height: 16),
-                  _buildSeedStationsButton(),
-                  const SizedBox(height: 8),
-                  _buildClearSeedStationsButton(),
                 ],
               ],
             ),
@@ -200,78 +188,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   /// Temporary operator-only button to seed demo stations.
-  /// Remove this method + its caller after the stations are in Firestore.
-  Widget _buildSeedStationsButton() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: SizedBox(
-        height: 42,
-        child: OutlinedButton.icon(
-          onPressed: () async {
-            final uid = context.read<AuthProvider>().user?.uid;
-            if (uid == null || uid.isEmpty) return;
-            final messenger = ScaffoldMessenger.of(context);
-            try {
-              final n = await StationSeeder.seed(uid);
-              messenger.showSnackBar(
-                SnackBar(content: Text('Seeded $n stations as pending.')),
-              );
-            } catch (e) {
-              messenger.showSnackBar(
-                SnackBar(content: Text('Seed failed: $e')),
-              );
-            }
-          },
-          icon: const Icon(Icons.auto_awesome, size: 16),
-          label: const Text('Seed Demo Stations',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF00C853),
-            side: const BorderSide(color: Color(0x6600C853)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(21),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Temporary operator-only button to delete all seeded stations.
-  Widget _buildClearSeedStationsButton() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: SizedBox(
-        height: 42,
-        child: OutlinedButton.icon(
-          onPressed: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            try {
-              final n = await StationSeeder.clearSeed();
-              messenger.showSnackBar(
-                SnackBar(content: Text('Cleared $n seeded stations.')),
-              );
-            } catch (e) {
-              messenger.showSnackBar(
-                SnackBar(content: Text('Clear failed: $e')),
-              );
-            }
-          },
-          icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('Clear Seeded Stations',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFD32F2F),
-            side: const BorderSide(color: Color(0x66D32F2F)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(21),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       padding: padding ?? const EdgeInsets.all(16),
