@@ -10,6 +10,9 @@ import '../widgets/battery_indicator.dart';
 import '../widgets/quick_stat_card.dart';
 import '../widgets/vehicle_card.dart';
 import 'station_detail_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../providers/user_location_provider.dart';
+import 'navigation_screen.dart';
 
 class CockpitScreen extends StatefulWidget {
   final VoidCallback? onSeeAllStations;
@@ -320,6 +323,33 @@ class _CockpitScreenState extends State<CockpitScreen> {
       onConnect: () => _showBatterySlider(context),
     );
   }
+  Future<void> _resumeNavigation(BuildContext context, dynamic trip) async {
+    final loc = context.read<UserLocationProvider>();
+    if (loc.position == null) {
+      await loc.ensureLoaded();
+    }
+    final pos = loc.position;
+    if (pos == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiting for location… try again in a moment')),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NavigationScreen.toPlace(
+          origin: LatLng(pos.latitude, pos.longitude),
+          destinationLatLng: LatLng(trip.destLat, trip.destLng),
+          destinationName: trip.destination,
+          destinationAddress: trip.destination,
+        ),
+      ),
+    );
+  }
+
   void _showBatterySlider(BuildContext context) {
     final vp = context.read<VehicleProvider>();
     double draftValue = vp.batteryLevel;
@@ -600,9 +630,9 @@ class _CockpitScreenState extends State<CockpitScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _outlineButton(
-                  label: 'View Details',
+                  label: 'View Trip',
                   color: const Color(0xFF00C853),
-                  onTap: widget.onViewTripDetails ?? () {},
+                  onTap: () => _resumeNavigation(context, trip),
                 ),
                 _outlineButton(
                   label: 'End Trip',
