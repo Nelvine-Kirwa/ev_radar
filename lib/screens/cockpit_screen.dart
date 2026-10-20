@@ -323,6 +323,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
   void _showBatterySlider(BuildContext context) {
     final vp = context.read<VehicleProvider>();
     double draftValue = vp.batteryLevel;
+    final justUpdated = ValueNotifier<bool>(false);
 
     showModalBottomSheet<void>(
       context: context,
@@ -336,165 +337,149 @@ class _CockpitScreenState extends State<CockpitScreen> {
           builder: (ctx, bt, _) {
             return StatefulBuilder(
               builder: (ctx, setSheetState) {
-              bool _showUpdatedBadge = false;
-            final pct = (draftValue * 100).round();
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                final pct = (draftValue * 100).round();
+                return SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Set Current Battery',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => Navigator.pop(ctx),
-                          icon: const Icon(Icons.close,
-                              color: Color(0xFFD32F2F), size: 24),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$pct%',
-                      style: TextStyle(
-                        color: pct <= 15
-                            ? const Color(0xFFD32F2F)
-                            : pct <= 30
-                                ? const Color(0xFFFFA000)
-                                : const Color(0xFF00C853),
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Slider(
-                      value: draftValue,
-                      min: 0.05,
-                      max: 1.0,
-                      divisions: 95,
-                      activeColor: const Color(0xFF00C853),
-                      inactiveColor: const Color(0xFF1F2937),
-                      onChanged: (v) {
-                        setSheetState(() => draftValue = v);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: _showUpdatedBadge ? 26 : 0,
-                      child: const Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.check_circle,
-                                color: Color(0xFF00C853), size: 16),
-                            SizedBox(width: 6),
-                            Text('Updated',
-                                style: TextStyle(
-                                    color: Color(0xFF00C853),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                vp.updateBattery(draftValue);
-                                if (bt.isTracking) {
-                                  await bt.updateCurrentPercent(draftValue);
-                                }
-                                setSheetState(() => _showUpdatedBadge = true);
-                                Future.delayed(const Duration(milliseconds: 1500), () {
-                                  if (ctx.mounted) {
-                                    setSheetState(() => _showUpdatedBadge = false);
-                                  }
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00C853),
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                              ),
-                              child: const Text(
-                                'Update',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800),
+                            const Text(
+                              'Set Current Battery',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => Navigator.pop(ctx),
+                              icon: const Icon(Icons.close,
+                                  color: Color(0xFFD32F2F), size: 24),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$pct%',
+                          style: TextStyle(
+                            color: pct <= 15
+                                ? const Color(0xFFD32F2F)
+                                : pct <= 30
+                                    ? const Color(0xFFFFA000)
+                                    : const Color(0xFF00C853),
+                            fontSize: 42,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 2,
-                          child: SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                if (bt.isTracking) {
-                                  await bt.pauseTracking();
-                                } else {
-                                  vp.updateBattery(draftValue);
-                                  await bt.startTracking(draftValue);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1F2937),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  side: BorderSide(
-                                    color: bt.isTracking
-                                        ? const Color(0xFFD32F2F)
-                                        : const Color(0xFF00C853),
-                                    width: 1.5,
+                        Slider(
+                          value: draftValue,
+                          min: 0.05,
+                          max: 1.0,
+                          divisions: 95,
+                          activeColor: const Color(0xFF00C853),
+                          inactiveColor: const Color(0xFF1F2937),
+                          onChanged: (v) {
+                            setSheetState(() => draftValue = v);
+                            if (justUpdated.value) {
+                              justUpdated.value = false;
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    vp.updateBattery(draftValue);
+                                    if (bt.isTracking) {
+                                      await bt.updateCurrentPercent(draftValue);
+                                    }
+                                    justUpdated.value = true;
+                                    setSheetState(() {});
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1F2937),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                      side: const BorderSide(
+                                        color: Color(0xFF00C853),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  child: ValueListenableBuilder<bool>(
+                                    valueListenable: justUpdated,
+                                    builder: (c, updated, _) => Text(
+                                      updated ? 'Updated' : 'Update',
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800),
+                                    ),
                                   ),
                                 ),
                               ),
-                              child: Text(
-                                bt.isTracking
-                                    ? 'Pause Tracking'
-                                    : 'Track',
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    if (bt.isTracking) {
+                                      await bt.pauseTracking();
+                                    } else {
+                                      vp.updateBattery(draftValue);
+                                      await bt.startTracking(draftValue);
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1F2937),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                      side: BorderSide(
+                                        color: bt.isTracking
+                                            ? const Color(0xFFD32F2F)
+                                            : const Color(0xFF00C853),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    bt.isTracking
+                                        ? 'Pause Tracking'
+                                        : 'Track',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-
                       ],
                     ),
-
-                  ],
-                ),
-              ),
-            );
+                  ),
+                );
               },
             );
           },
         );
       },
-    );
+    ).whenComplete(() => justUpdated.dispose());
   }
 
   Widget _buildActiveTripCard() {
