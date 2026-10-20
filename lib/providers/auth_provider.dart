@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../models/user_vehicle.dart';
@@ -11,16 +13,40 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
+
   AuthProvider() {
     _service.authStateChanges.listen((user) async {
       _user = user;
+      // Cancel previous live listener
+      await _profileSub?.cancel();
+      _profileSub = null;
+
       if (user != null) {
         _profile = await _service.getUserProfile();
+        // Live listener: keeps suspended/role in sync without a restart
+        _profileSub = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .snapshots()
+            .listen((doc) {
+          final data = doc.data();
+          if (data != null) {
+            _profile = data;
+            notifyListeners();
+          }
+        });
       } else {
         _profile = null;
       }
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _profileSub?.cancel();
+    super.dispose();
   }
 
   User? get user => _user;

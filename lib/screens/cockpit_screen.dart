@@ -389,12 +389,13 @@ class _CockpitScreenState extends State<CockpitScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    if (_showUpdatedBadge)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: _showUpdatedBadge ? 26 : 0,
+                      child: const Center(
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Icon(Icons.check_circle,
                                 color: Color(0xFF00C853), size: 16),
                             SizedBox(width: 6),
@@ -406,6 +407,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
                           ],
                         ),
                       ),
+                    ),
                     Row(
                       children: [
                         Expanded(

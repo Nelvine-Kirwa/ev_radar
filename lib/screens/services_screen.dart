@@ -224,6 +224,20 @@ class _ServicesScreenState extends State<ServicesScreen> {
               final eq = kHardwareOptions[i];
               return GestureDetector(
                 onTap: () {
+                  final role = context.read<AuthProvider>().role;
+                  final messenger = ScaffoldMessenger.of(context);
+                  if (role == 'admin') {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text(
+                            'Admins cannot book installation services.')));
+                    return;
+                  }
+                  if (role == 'technician') {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text(
+                            'Technicians cannot book installation services.')));
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -631,7 +645,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         relatedBookingId: booking.id,
       );
     } catch (_) {
-      // Silent â€” cancellation already succeeded
+      // Silent — cancellation already succeeded
     }
   }
   Future<void> _confirmCancel(Booking booking) async {

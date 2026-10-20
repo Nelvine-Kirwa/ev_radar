@@ -16,8 +16,10 @@ import 'providers/user_location_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/saved_stations_provider.dart';
 import 'providers/station_booking_provider.dart';
+import 'providers/battery_tracking_provider.dart';
 import 'services/push_notification_service.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/suspended_guard.dart';
 import 'utils/constants.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -63,6 +65,7 @@ class EVRadarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
         ChangeNotifierProvider(create: (_) => ChargingProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
+        ChangeNotifierProvider(create: (_) => BatteryTrackingProvider()),
         ChangeNotifierProvider(create: (_) => InstallationProvider()),
         ChangeNotifierProvider(create: (_) => UserLocationProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
@@ -87,6 +90,8 @@ class EVRadarApp extends StatelessWidget {
             },
           ),
         ),
+        builder: (context, child) =>
+            SuspendedGuard(child: child ?? const SizedBox.shrink()),
         home: const SplashScreen(),
       ),
     );
