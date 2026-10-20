@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/constants.dart';
-import '../home_screen.dart';
 import 'register_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/auth_button.dart';

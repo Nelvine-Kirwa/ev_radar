@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/trip_plan.dart';
-import '../services/trip_planner_service.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
-import '../models/station_booking.dart';
-import 'my_bookings_screen.dart';
 import '../scripts/seed_stations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/charging_station.dart';
 import 'station_detail_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import '../services/location_service.dart';

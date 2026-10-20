@@ -121,11 +121,11 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     await context.read<SavedStationsProvider>().toggleLike(s.id, uid);
   }
 
-  @override
     /// Opens the slot-picker bottom sheet for [s].
   Future<void> _openBookingSheet(ChargingStation s) async {
     await BookingSheet.show(context, s);
   }
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChargingProvider>();
     final station = provider.currentStation;

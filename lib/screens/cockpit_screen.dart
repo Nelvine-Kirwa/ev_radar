@@ -808,44 +808,4 @@ class _CockpitScreenState extends State<CockpitScreen> {
     );
   }
 
-  Widget _actionTile({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF111827),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1F2937)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0x1A00C853),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x6600C853)),
-              ),
-              child: Icon(icon, color: const Color(0xFF00C853), size: 22),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
