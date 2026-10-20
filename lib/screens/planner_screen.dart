@@ -209,7 +209,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
             Icon(Icons.route, color: Color(0xFF4A5568), size: 44),
             SizedBox(height: 12),
             Text(
-              'No route calculated yet',
+              'Enter your Destination',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
