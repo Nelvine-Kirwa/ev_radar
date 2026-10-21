@@ -21,7 +21,7 @@ import '../widgets/glass/glass_button.dart';
 import '../widgets/glass/glass_list_item.dart';
 import 'become_operator_screen.dart';
 import 'become_technician_screen.dart';
-import 'terms_dialog.dart';
+import 'terms_screen.dart';
 import 'auth/login_screen.dart';
 
 class ProfileSupportScreen extends StatefulWidget {
@@ -267,7 +267,7 @@ class _ProfileSupportScreenState extends State<ProfileSupportScreen> {
                     GlassMenuItem(
                       icon: Icons.description_outlined,
                       label: 'Terms & Conditions',
-                      onTap: () => TermsDialog.show(context),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsScreen())),
                     ),
                     GlassMenuItem(
                       icon: Icons.logout,

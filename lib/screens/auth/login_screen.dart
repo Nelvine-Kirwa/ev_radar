@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/constants.dart';
 import 'register_screen.dart';
+import '../terms_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/auth_button.dart';
 import '../splash_screen.dart';
@@ -134,6 +135,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.login,
                       isLoading: auth.isLoading,
                       onPressed: _signIn,
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TermsScreen()),
+                          );
+                        },
+                        child: const Text(
+                          'By signing in, you agree to our Terms & Privacy Policy',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color(0xFF8892B0),
+                              fontSize: 11,
+                              decoration: TextDecoration.underline),
+                        ),
+                      ),
                     ),
                   ],
                 ),

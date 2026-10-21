@@ -5,6 +5,7 @@ import '../../utils/constants.dart';
 import '../home_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/auth_button.dart';
+import '../terms_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -216,11 +217,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            'I accept the Terms & Privacy Policy',
-                            style: TextStyle(
-                                color: Color(0xFF8892B0), fontSize: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const TermsScreen()),
+                              );
+                            },
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(
+                                    color: Color(0xFF8892B0), fontSize: 12),
+                                children: [
+                                  TextSpan(text: 'I accept the '),
+                                  TextSpan(
+                                    text: 'Terms & Privacy Policy',
+                                    style: TextStyle(
+                                      color: Color(0xFF00C853),
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -230,7 +252,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       label: 'CREATE ACCOUNT',
                       icon: Icons.person_add,
                       isLoading: auth.isLoading,
-                      onPressed: _register,
+                      onPressed: () {
+                        if (!_acceptTerms) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Please accept the Terms & Privacy Policy to continue.')),
+                          );
+                          return;
+                        }
+                        _register();
+                      },
                     ),
                   ],
                 ),
