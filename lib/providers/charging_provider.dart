@@ -34,6 +34,8 @@ class ChargingProvider extends ChangeNotifier {
   }) {
     final saved = savedIds ?? const <String>{};
     var list = _allStations.where((s) {
+      // OFFLINE stations must never appear in the driver-facing app.
+      if (s.status.trim().toUpperCase() == 'OFFLINE') return false;
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         if (!s.name.toLowerCase().contains(q) &&

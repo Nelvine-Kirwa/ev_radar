@@ -69,7 +69,17 @@ class _StationsScreenState extends State<StationsScreen> {
     StationBookingProvider bookings,
   ) {
     if (bookings.isStationBusy(s.id)) return 'busy';
-    return provider.pseudoStatus(s);
+    final raw = s.status.trim().toUpperCase();
+    switch (raw) {
+      case 'OPERATIONAL':
+        return 'available';
+      case 'BUSY':
+        return 'busy';
+      case 'OFFLINE':
+        return 'offline';
+      default:
+        return 'available';
+    }
   }
 
   @override
@@ -81,8 +91,8 @@ class _StationsScreenState extends State<StationsScreen> {
     final bookings = context.watch<StationBookingProvider>();
     final currentCar = vehicle.currentCar;
 
-    final baseStations =
-        provider.visibleStationsWith(savedIds: saved.savedIds);
+    final baseStations = provider
+        .visibleStationsWith(savedIds: saved.savedIds);
 
     final stations = _myCarOnly && currentCar != null
         ? baseStations.where((s) {

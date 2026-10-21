@@ -6,6 +6,7 @@ import 'cockpit_screen.dart';
 import 'stations_screen.dart';
 import 'planner_screen.dart';
 import '../providers/installation_provider.dart';
+import '../providers/charging_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
 import 'services_screen.dart';
@@ -40,7 +41,18 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  void _goTo(int i) => setState(() => _index = i);
+  void _goTo(int i) {
+    setState(() => _index = i);
+    // When switching to the Stations tab, force a live refresh
+    // so status changes from admin/operator propagate instantly.
+    if (i == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<ChargingProvider>().loadAllStations();
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
