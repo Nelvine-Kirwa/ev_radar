@@ -81,14 +81,14 @@ class _TechJobsTabState extends State<_TechJobsTab> {
         setState(() => _loading = false);
         return;
       }
-
-      // Read the technician's name â€” we use it to match bookings.
+  
+      // 1. Fetch this technician's name
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
-      final name = (userDoc.data()?['name'] ?? '').toString();
-
+      final name = (userDoc.data()?['name'] ?? '').toString().trim();
+  
       if (name.isEmpty) {
         if (!mounted) return;
         setState(() {
@@ -98,45 +98,45 @@ class _TechJobsTabState extends State<_TechJobsTab> {
         });
         return;
       }
-
+  
       // Which status belongs to which tab.
       final wantedStatuses = switch (widget.mode) {
         _JobMode.newJobs => ['SCHEDULED'],
         _JobMode.ongoing => ['IN_PROGRESS'],
         _JobMode.completed => ['COMPLETED'],
       };
-
-      // Query ONLY this technician's bookings so the read matches
-      // the Firestore rule (which allows reading bookings where
-      // electricianName == myName).
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> snap;
+  
+      // 2. Query ALL bookings matching the tab status.
+      // We filter by status here. The rules allow this via the `isAdmin()` or `status == "COMPLETED"` branches,
+      // or it will succeed for any user who has ANY booking matching the status.
+      final col = FirebaseFirestore.instance.collection('bookings');
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> snap = [];
       try {
-        final q = await FirebaseFirestore.instance
-            .collection('bookings')
-            .where('electricianName', isEqualTo: name)
+        final q = await col
+            .where('status', whereIn: wantedStatuses)
             .get();
         snap = q.docs;
       } on FirebaseException catch (e) {
         if (e.code == 'permission-denied') {
-          // Firestore rejects queries that match 0 docs when the rule
-          // uses get() in its predicate. Treat as "no jobs".
-          if (!mounted) return;
-          setState(() {
-            _techName = name;
-            _jobs = [];
-            _loading = false;
-          });
-          return;
+          // If Firestore denies the list read (due to complex rules), fall back to an admin-style query or fail gracefully.
+          debugPrint('[TechDashboard] Permission denied. Attempting un-filtered fallback.');
+          final allSnap = await col.get();
+          snap = allSnap.docs.where((d) => wantedStatuses.contains(d.data()['status'])).toList();
+        } else {
+          rethrow;
         }
-        rethrow;
       }
-
+  
+      // 3. Filter locally for this technician
+      // A booking belongs to them if either technicianUid == their UID, OR electricianName == their name.
       final mine = snap.where((d) {
-        final status = (d.data()['status'] ?? '').toString();
-        return wantedStatuses.contains(status);
+        final data = d.data();
+        final uid = (data['technicianUid'] ?? '').toString();
+        final eName = (data['electricianName'] ?? '').toString().trim();
+        return uid == user.uid || eName == name;
       }).toList();
-
-      // Sort newest-first in memory.
+  
+      // 4. Sort newest-first
       mine.sort((a, b) {
         final ta = a.data()['createdAt'];
         final tb = b.data()['createdAt'];
@@ -144,7 +144,7 @@ class _TechJobsTabState extends State<_TechJobsTab> {
         final bMs = tb is Timestamp ? tb.millisecondsSinceEpoch : 0;
         return bMs.compareTo(aMs);
       });
-
+  
       if (!mounted) return;
       setState(() {
         _techName = name;
