@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/notification_service.dart';
+import 'navigation_screen.dart';
+import '../providers/user_location_provider.dart';
 
 /// Technician dashboard â€” visible to users with role == 'technician'.
 /// Three tabs:
@@ -177,7 +181,48 @@ class _TechJobsTabState extends State<_TechJobsTab> {
     }
   }
 
-  Future<void> _markDone(
+  Future<void> _openNavigation(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc) async {
+  final d = doc.data();
+  final lat = (d['latitude'] as num?)?.toDouble();
+  final lng = (d['longitude'] as num?)?.toDouble();
+  final address = (d['address'] ?? 'Customer Location').toString();
+
+  if (lat == null || lng == null) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No coordinates saved for this booking.')),
+    );
+    return;
+  }
+
+  final loc = context.read<UserLocationProvider>();
+  if (loc.position == null) {
+    await loc.ensureLoaded();
+  }
+  final pos = loc.position;
+  if (pos == null) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Waiting for your GPS fix… try again.')),
+    );
+    return;
+  }
+
+  if (!mounted) return;
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => NavigationScreen.toPlace(
+        origin: LatLng(pos.latitude, pos.longitude),
+        destinationLatLng: LatLng(lat, lng),
+        destinationName: address,
+        destinationAddress: address,
+      ),
+    ),
+  );
+}
+Future<void> _markDone(
       QueryDocumentSnapshot<Map<String, dynamic>> doc) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -330,7 +375,19 @@ class _TechJobsTabState extends State<_TechJobsTab> {
             ],
           ),
           const SizedBox(height: 8),
-          _row('Customer', (d['userEmail'] ?? '').toString()),
+          _row(
+            'Customer',
+            () {
+              final email = (d['userEmail'] ?? '').toString();
+              final explicit = (d['customerName'] ?? '').toString();
+              if (explicit.isNotEmpty) return explicit;
+              if (email.isEmpty) return '';
+              final local = email.split('@').first;
+              if (local.isEmpty) return '';
+              return local[0].toUpperCase() + local.substring(1);
+            }(),
+          ),
+          _row('Email', (d['userEmail'] ?? '').toString()),
           _row('Phone', (d['userPhone'] ?? '').toString()),
           _row('Address', (d['address'] ?? '').toString()),
           _row('Fee', 'KSh ' + ((d['bookingFeeKsh'] ?? 0).toString())),
@@ -356,7 +413,25 @@ class _TechJobsTabState extends State<_TechJobsTab> {
                       style: TextStyle(
                           fontSize: 11, fontWeight: FontWeight.w800)),
                 ),
-              if (mode == _JobMode.ongoing)
+              if (mode == _JobMode.ongoing) ...[
+                OutlinedButton.icon(
+                  onPressed: () => _openNavigation(doc),
+                  icon: const Icon(Icons.navigation, size: 14),
+                  label: const Text('Navigate',
+                      style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w800)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4FA3E8),
+                    side: const BorderSide(color: Color(0xFF4FA3E8), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    minimumSize: const Size(0, 34),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () => _markDone(doc),
                   style: ElevatedButton.styleFrom(
@@ -374,6 +449,7 @@ class _TechJobsTabState extends State<_TechJobsTab> {
                       style: TextStyle(
                           fontSize: 11, fontWeight: FontWeight.w800)),
                 ),
+              ],
             ],
           ),
         ],
