@@ -328,7 +328,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
   Widget _buildInclusionsCard() {
     const inclusions = [
-      'County Government Permit & KPLC Grid Clearance Documentation',
       'Certified EPRA Class A/B Master Technician Labor & Diagnostics',
       'Type 2 SPDs (Surge Protection Device) & Dedicated RCBO Breaker',
       'Up to 15m Heavy-Duty Armoured Cable Run (indoor/outdoor rated)',
@@ -346,20 +345,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0x1A00C853),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text('KSh 74,900 Base',
-                    style: TextStyle(
-                        color: Color(0xFF00C853),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700)),
-              ),
             ],
           ),
           const SizedBox(height: 14),

@@ -7,6 +7,7 @@ import '../models/station_booking.dart';
 import '../providers/auth_provider.dart';
 import '../providers/station_booking_provider.dart';
 import '../services/booking_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Shows all of the current user's bookings — charging slots and
 /// installation services — in two tabs.
@@ -94,6 +95,29 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final ok = await context
         .read<StationBookingProvider>()
         .cancelBooking(b.id, uid);
+
+    // Notify the station operator that their booking was cancelled
+    if (ok) {
+      try {
+        final stationDoc = await FirebaseFirestore.instance
+            .collection('stations')
+            .doc(b.stationId)
+            .get();
+        final operatorId = stationDoc.data()?['operatorId'] as String?;
+        if (operatorId != null && operatorId.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('notifications').add({
+            'recipientId': operatorId,
+            'title': 'Booking Cancelled',
+            'body': '${b.userEmail} cancelled their booking at ${b.stationName}.',
+            'type': 'OPERATOR_BOOKING_CANCELLED',
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        debugPrint('[MyBookings] Cancel notification failed: $e');
+      }
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(ok ? 'Booking cancelled' : 'Could not cancel')),

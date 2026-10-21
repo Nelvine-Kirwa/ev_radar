@@ -36,14 +36,17 @@ class StationBookingService {
   }
 
   /// Returns a user's own upcoming + active bookings.
+  /// Returns a user's own upcoming + active bookings.
   Future<List<StationBooking>> getUserBookings(String userId) async {
     try {
       final snap = await _col
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'CONFIRMED')
-          .orderBy('startTime')
           .get();
-      return snap.docs.map(StationBooking.fromFirestore).toList();
+      final list = snap.docs.map(StationBooking.fromFirestore).toList();
+      // Sort in memory to avoid requiring a composite Firestore index.
+      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+      return list;
     } catch (e) {
       debugPrint('[StationBookingService] getUserBookings ERROR: $e');
       return [];
@@ -122,6 +125,18 @@ class StationBookingService {
   }
 
   /// Cancels a booking (owner only — enforced in rules).
+  /// Fetch a single booking by ID (used for notification lookup before cancel)
+  Future<StationBooking?> getBookingById(String bookingId) async {
+    try {
+      final doc = await _col.doc(bookingId).get();
+      if (!doc.exists) return null;
+      return StationBooking.fromFirestore(doc);
+    } catch (e) {
+      debugPrint('[StationBookingService] getBookingById ERROR: $e');
+      return null;
+    }
+  }
+
   Future<bool> cancelBooking(String bookingId) async {
     try {
       await _col.doc(bookingId).update({'status': 'CANCELLED'});
