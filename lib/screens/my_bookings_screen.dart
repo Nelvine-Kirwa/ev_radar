@@ -311,17 +311,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: () => _cancelCharging(b),
                 icon: const Icon(Icons.cancel_outlined,
-                    size: 16, color: Color(0xFFD32F2F)),
+                    size: 14, color: Color(0xFFD32F2F)),
                 label: const Text(
                   'CANCEL BOOKING',
                   style: TextStyle(
                     color: Color(0xFFD32F2F),
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  side: const BorderSide(color: Color(0xFFD32F2F), width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
               ),
@@ -415,17 +422,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: () => _cancelInstallation(b),
                 icon: const Icon(Icons.cancel_outlined,
-                    size: 16, color: Color(0xFFD32F2F)),
+                    size: 14, color: Color(0xFFD32F2F)),
                 label: const Text(
                   'CANCEL BOOKING',
                   style: TextStyle(
                     color: Color(0xFFD32F2F),
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  side: const BorderSide(color: Color(0xFFD32F2F), width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
               ),
