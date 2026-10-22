@@ -70,8 +70,16 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              const Icon(Icons.electric_car,
-                  color: AppColors.primary, size: 60),
+              Center(
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/icon/ev_radar_icon.png',
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               const Text(
                 'WELCOME BACK',
@@ -193,3 +201,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
@@ -47,6 +48,20 @@ Future<void> main() async {
   );
 
   await dotenv.load(fileName: '.env');
+
+  // Notification permission is required on Android 13+ for the
+  // foreground tracking notification to appear.
+  try {
+    await Permission.notification.request();
+  } catch (_) {}
+
+  // Ask the user to exempt EV Radar from battery optimisation.
+  try {
+    final batteryOpt = await Permission.ignoreBatteryOptimizations.status;
+    if (batteryOpt.isDenied) {
+      await Permission.ignoreBatteryOptimizations.request();
+    }
+  } catch (_) {}
 
   await PushNotificationService().init(navKey: rootNavigatorKey);
   await PushNotificationService().requestPermission();
