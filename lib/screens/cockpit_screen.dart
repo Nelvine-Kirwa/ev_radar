@@ -75,7 +75,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
               children: [
                 _buildBatteryCard(vehicle),
                 const SizedBox(height: 16),
-                _buildStatsRow(),
+                _buildStatsRow(context.watch<BatteryTrackingProvider>(), context.watch<VehicleProvider>()),
                 const SizedBox(height: 16),
                 _buildVehicleCard(),
                 const SizedBox(height: 16),
@@ -215,31 +215,61 @@ class _CockpitScreenState extends State<CockpitScreen> {
       ),
     );
   }
-  Widget _buildStatsRow() {
+  Widget _buildStatsRow(BatteryTrackingProvider bt, VehicleProvider vp) {
+    // Live distance from the tracker.
+    final double distanceKm = bt.todayDistanceKm;
+    // Energy used today, in kWh, computed from the battery drop across
+    // tracked sessions. Falls back to 0 while tracking has not started.
+    final double energyKwh = bt.todayEnergyKwh;
+    // Real efficiency measured from the session (km per kWh).
+    final double? efficiency = bt.todayEfficiencyKmPerKwh;
+
+    // Format helpers — keep strings short so they fit the card.
+    String fmtDistance() {
+      if (!bt.isTracking && distanceKm == 0.0) return '--';
+      return distanceKm.toStringAsFixed(1);
+    }
+
+    String fmtEnergy() {
+      if (!bt.isTracking && energyKwh == 0.0) return '--';
+      return energyKwh.toStringAsFixed(2);
+    }
+
+    String fmtEfficiency() {
+      if (efficiency == null) return '--';
+      return efficiency.toStringAsFixed(1);
+    }
+
+    // The user may change vehicle mid-day; make sure kWh per % uses the
+    // current vehicle's battery size.
+    if (vp.currentCar != null) {
+      bt.setBatteryKwh(vp.currentCar!.batteryKwh.toDouble());
+    }
+
     return Row(
-      children: const [
+      children: [
         Expanded(
           child: QuickStatCard(
             label: 'Distance Today',
-            value: '--',
+            value: fmtDistance(),
             unit: 'km',
             icon: Icons.route_outlined,
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: QuickStatCard(
             label: 'Energy Used',
-            value: '--',
+            value: fmtEnergy(),
             unit: 'kWh',
-            icon: Icons.bolt_outlined,
+            icon: Icons.bolt,
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: QuickStatCard(
             label: 'Vehicle Efficiency',
-            value: '--',
+            value: fmtEfficiency(),
             unit: 'km/kWh',
             icon: Icons.speed_outlined,
           ),

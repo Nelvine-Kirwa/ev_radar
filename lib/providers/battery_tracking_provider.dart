@@ -20,12 +20,49 @@ class BatteryTrackingProvider extends ChangeNotifier {
   double _distanceCoveredKm = 0.0;
   double _kmPerPercent = _defaultKmPerPercent;
 
+  // ── Today's aggregate totals (survive restarts, reset at midnight) ──
+  double _todayDistanceKm = 0.0;
+  double _todayEnergyKwh = 0.0;
+  DateTime? _todayDate; // the calendar day the above totals belong to
+  double _batteryKwh = 60.0; // from vehicle; updated by setBatteryKwh
+
   bool get isTracking => _isTracking;
   DateTime? get startedAt => _startedAt;
   double get startPercent => _startPercent;
   double get currentPercent => _currentPercent;
   double get distanceCoveredKm => _distanceCoveredKm;
   double get kmPerPercent => _kmPerPercent;
+
+  // Today's aggregates (updated during tracking, reset at midnight)
+  double get todayDistanceKm => _todayDistanceKm;
+  double get todayEnergyKwh => _todayEnergyKwh;
+
+  /// Real efficiency measured from the session:
+  /// distance travelled per kWh of battery actually consumed.
+  /// Returns null if there is not enough data yet.
+  double? get todayEfficiencyKmPerKwh {
+    if (_todayEnergyKwh <= 0.0) return null;
+    return _todayDistanceKm / _todayEnergyKwh;
+  }
+
+  /// Called from the cockpit when the current vehicle changes.
+  /// Updates the battery size used to convert % drops into kWh.
+  void setBatteryKwh(double kwh) {
+    if (kwh <= 0) return;
+    if (_batteryKwh == kwh) return;
+    _batteryKwh = kwh;
+    notifyListeners();
+  }
+
+  void _rollTodayIfNeeded() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_todayDate == null || _todayDate != today) {
+      _todayDate = today;
+      _todayDistanceKm = 0.0;
+      _todayEnergyKwh = 0.0;
+    }
+  }
 
   double get drainProgress {
     if (_startPercent <= 0) return 0.0;
@@ -40,6 +77,7 @@ class BatteryTrackingProvider extends ChangeNotifier {
   }
 
   Future<void> startTracking(double currentPercent) async {
+    _rollTodayIfNeeded();
     _isTracking = true;
     _startedAt = DateTime.now();
     _startPercent = currentPercent.clamp(0.0, 1.0);
@@ -111,6 +149,17 @@ class BatteryTrackingProvider extends ChangeNotifier {
 
     final drainPercent = _distanceCoveredKm / _kmPerPercent / 100.0;
     _currentPercent = (_startPercent - drainPercent).clamp(0.0, 1.0);
+
+    // ── Update today's aggregates ──
+    _rollTodayIfNeeded();
+    final deltaKmLocal = deltaKm; // the increment for this GPS tick
+    // energy this tick: convert distance to kWh via the vehicle efficiency implied by kmPerPercent.
+    // kmPerPercent is km per 1% of battery. 1% = batteryKwh/100 kWh.
+    // So kWh per km = (batteryKwh/100) / kmPerPercent.
+    final kwhPerKm = (_batteryKwh / 100.0) / _kmPerPercent;
+    _todayDistanceKm += deltaKmLocal;
+    _todayEnergyKwh += deltaKmLocal * kwhPerKm;
+
     notifyListeners();
     _persist();
   }
@@ -140,6 +189,12 @@ class BatteryTrackingProvider extends ChangeNotifier {
       await prefs.setDouble('battery_tracking_start_pct', _startPercent);
       await prefs.setDouble('battery_tracking_current_pct', _currentPercent);
       await prefs.setDouble('battery_tracking_distance_km', _distanceCoveredKm);
+      await prefs.setDouble('battery_tracking_today_distance_km', _todayDistanceKm);
+      await prefs.setDouble('battery_tracking_today_energy_kwh', _todayEnergyKwh);
+      if (_todayDate != null) {
+        await prefs.setString(
+            'battery_tracking_today_date', _todayDate!.toIso8601String());
+      }
     } catch (_) {}
   }
 
@@ -155,6 +210,14 @@ class BatteryTrackingProvider extends ChangeNotifier {
       _currentPercent = prefs.getDouble('battery_tracking_current_pct') ?? 0.0;
       _distanceCoveredKm =
           prefs.getDouble('battery_tracking_distance_km') ?? 0.0;
+      _todayDistanceKm =
+          prefs.getDouble('battery_tracking_today_distance_km') ?? 0.0;
+      _todayEnergyKwh =
+          prefs.getDouble('battery_tracking_today_energy_kwh') ?? 0.0;
+      final dayStr = prefs.getString('battery_tracking_today_date');
+      _todayDate = dayStr != null ? DateTime.tryParse(dayStr) : null;
+      // Reset today's totals if the calendar day changed while the app was off.
+      _rollTodayIfNeeded();
       if (_isTracking) {
         await _attachGps();
       }
@@ -168,6 +231,9 @@ class BatteryTrackingProvider extends ChangeNotifier {
     _startPercent = 0.0;
     _currentPercent = 0.0;
     _distanceCoveredKm = 0.0;
+    _todayDistanceKm = 0.0;
+    _todayEnergyKwh = 0.0;
+    _todayDate = null;
     _lastLat = null;
     _lastLng = null;
     await _detachGps();
@@ -179,6 +245,9 @@ class BatteryTrackingProvider extends ChangeNotifier {
       await prefs.remove('battery_tracking_start_pct');
       await prefs.remove('battery_tracking_current_pct');
       await prefs.remove('battery_tracking_distance_km');
+      await prefs.remove('battery_tracking_today_distance_km');
+      await prefs.remove('battery_tracking_today_energy_kwh');
+      await prefs.remove('battery_tracking_today_date');
     } catch (_) {}
   }
 
