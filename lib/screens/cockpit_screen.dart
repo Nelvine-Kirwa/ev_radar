@@ -500,6 +500,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
                                     if (bt.isTracking) {
                                       await bt.pauseTracking();
                                     } else {
+
                                       vp.updateBattery(draftValue);
                                       await bt.startTracking(draftValue);
                                     }

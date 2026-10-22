@@ -111,14 +111,43 @@ class BatteryTrackingProvider extends ChangeNotifier {
   Future<void> _attachGps() async {
     await _detachGps();
     try {
-      final perm = await Geolocator.checkPermission();
+      // Step 1: Force a foreground fix first. This guarantees the OS
+      // registers the app's GPS intent before we ask for background.
+      var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.deniedForever) {
+        return;
+      }
+      
+      // Step 2: Give Android 500ms to settle the foreground state.
+      // This prevents the OS from swallowing the background prompt.
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Step 3: Escalate to background permission.
+      if (perm == LocationPermission.whileInUse) {
         await Geolocator.requestPermission();
       }
+
+      // Foreground notification promotes the GPS stream to an Android
+      // foreground service so it keeps running with the screen off.
+      // NOTE: AndroidSettings and ForegroundNotificationConfig are NOT
+      // const constructors (they hold runtime AndroidResource objects).
       _positionSub = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
+        locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 10,
+          forceLocationManager: false,
+          foregroundNotificationConfig: ForegroundNotificationConfig(
+            notificationTitle: 'EV Radar tracking is active',
+            notificationText: 'Recording your distance',
+            notificationChannelName: 'Battery Tracking',
+            notificationIcon:
+                AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
+            enableWakeLock: true,
+            setOngoing: true,
+          ),
         ),
       ).listen(_handlePosition, onError: (_) {});
     } catch (_) {}
