@@ -94,12 +94,13 @@ class _BookingSheetState extends State<BookingSheet> {
 
     // 1. Send notification to the USER
     try {
-      await NotificationService().createNotification(
-        recipientId: uid,
-        type: 'BOOKING_CONFIRMED',
-        title: 'Booking Confirmed',
-        body: 'Your charging slot at  is booked for .',
-        relatedBookingId: id,
+      await NotificationService().notifyBookingConfirmed(
+        userId: uid,
+        equipmentName: widget.station.name,
+        electricianName: 'Charging Station',
+        address: _slotLabel(hour),
+        bookingId: id,
+        isChargingSlot: true, // <--- THIS FIXES THE MESSAGE
       );
     } catch (e) {
       debugPrint('User notification failed: ');

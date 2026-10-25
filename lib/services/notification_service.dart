@@ -1,11 +1,8 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_item.dart';
 
 class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final CollectionReference _col =
-      FirebaseFirestore.instance.collection('notifications');
 
   Future<void> createNotification({
     required String recipientId,
@@ -15,88 +12,99 @@ class NotificationService {
     String? relatedBookingId,
   }) async {
     try {
-      await _col.add({
+      await _db.collection('notifications').add({
         'recipientId': recipientId,
         'type': type,
         'title': title,
         'body': body,
-        if (relatedBookingId != null) 'relatedBookingId': relatedBookingId,
+        'relatedBookingId': relatedBookingId,
         'read': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      debugPrint('[NotificationService] Create ERROR: $e');
+      print('Error creating notification: $e');
     }
   }
 
-  /// Client-side confirmation when they submit a booking.
   Future<void> notifyBookingConfirmed({
     required String userId,
     required String equipmentName,
     required String electricianName,
     required String address,
     required String bookingId,
-  }) =>
-      createNotification(
+    bool isChargingSlot = false,
+  }) async {
+    try {
+      final message = isChargingSlot
+          ? 'Your charging slot at ${equipmentName} is booked for ${address}.'
+          : 'Your ${equipmentName} installation at ${address} is scheduled. ${electricianName} will contact you within 24 hours.';
+
+      await createNotification(
         recipientId: userId,
         type: 'BOOKING_CONFIRMED',
         title: 'Booking Confirmed',
-        body:
-            'Your $equipmentName installation at $address is scheduled. $electricianName will contact you within 24 hours.',
+        body: message,
         relatedBookingId: bookingId,
       );
+    } catch (_) {}
+  }
 
-  /// Client-side confirmation when they cancel.
   Future<void> notifyBookingCancelled({
     required String userId,
     required String equipmentName,
     required String address,
     required String bookingId,
-  }) =>
-      createNotification(
+  }) async {
+    try {
+      await createNotification(
         recipientId: userId,
         type: 'BOOKING_CANCELLED_BY_USER',
         title: 'Booking Cancelled',
-        body:
-            'Your $equipmentName booking at $address has been cancelled. The KSh 2,500 fee will be refunded.',
+        body: 'Your $equipmentName booking at $address has been cancelled.',
         relatedBookingId: bookingId,
       );
+    } catch (_) {}
+  }
 
+  /// One-shot fetch used by pull-to-refresh
   Future<List<NotificationItem>> getForUser(String userId) async {
     try {
-      final snap = await _col
+      final snap = await _db
+          .collection('notifications')
           .where('recipientId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
           .limit(50)
           .get();
-      return snap.docs.map((d) => NotificationItem.fromFirestore(d)).toList();
+      return snap.docs.map((doc) => NotificationItem.fromFirestore(doc)).toList();
     } catch (e) {
-      debugPrint('[NotificationService] Query ERROR: $e');
+      print('Error getting notifications: $e');
       return [];
     }
   }
 
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _col.doc(notificationId).update({'read': true});
+      await _db.collection('notifications').doc(notificationId).update({'read': true});
     } catch (e) {
-      debugPrint('[NotificationService] Mark read ERROR: $e');
+      print('Error marking as read: $e');
     }
   }
 
   Future<void> markAllAsRead(String userId) async {
     try {
-      final snap = await _col
+      final batch = _db.batch();
+      final snapshot = await _db
+          .collection('notifications')
           .where('recipientId', isEqualTo: userId)
           .where('read', isEqualTo: false)
           .get();
-      final batch = _db.batch();
-      for (final doc in snap.docs) {
+
+      for (var doc in snapshot.docs) {
         batch.update(doc.reference, {'read': true});
       }
       await batch.commit();
     } catch (e) {
-      debugPrint('[NotificationService] Mark all read ERROR: $e');
+      print('Error marking all as read: $e');
     }
   }
 }
