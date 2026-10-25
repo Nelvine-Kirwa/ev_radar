@@ -471,7 +471,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            _quickFact('AIR DIST', distText),
+            _quickFact('EST DIST', distText),
             const VerticalDivider(color: Color(0xFF1F2937), width: 1),
             _quickFact('PRICE', 'KSh ${s.pricePerKwhKsh}\n/ kWh',
                 valueColor: const Color(0xFF00C853)),
@@ -583,14 +583,21 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(
-                  available ? 'AC Fast - 22 kW' : 'In Use',
+                  available ? '' : 'In Use',
                   style: const TextStyle(
                       color: Color(0xFF8892B0), fontSize: 11),
                 ),
               ],
             ),
           ),
-          _portStatusBadge(available ? 'Free' : 'In Use', available),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: available ? const Color(0xFF00C853) : const Color(0xFF8892B0),
+              shape: BoxShape.circle,
+            ),
+          ),
         ],
       ),
     );

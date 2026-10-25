@@ -32,8 +32,6 @@ class StationBookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetches the set of stations that are BUSY right now (active booking).
-  /// Called by StationsScreen on tab open and after each booking.
   Future<void> refreshBusyStations() async {
     try {
       final ids = await _service.getBusyStationIds(DateTime.now());
@@ -44,7 +42,6 @@ class StationBookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Load bookings for a station on [_selectedDay].
   Future<void> loadForStationOnDay(String stationId, DateTime day) async {
     _selectedDay = DateTime(day.year, day.month, day.day);
     _loading = true;
@@ -64,7 +61,6 @@ class StationBookingProvider extends ChangeNotifier {
     }
   }
 
-  /// Load user's upcoming bookings.
   Future<void> loadMyBookings(String userId) async {
     try {
       _myBookings = await _service.getUserBookings(userId);
@@ -81,22 +77,12 @@ class StationBookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// True if [slotStart, slotEnd] is taken by an existing booking.
-  bool isSlotTaken(DateTime slotStart, DateTime slotEnd) {
-    for (final b in _dayBookings) {
-      if (b.startTime.isBefore(slotEnd) && b.endTime.isAfter(slotStart)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /// True if the given slot is in the past.
   bool isSlotPast(DateTime slotStart) {
     return slotStart.isBefore(DateTime.now());
   }
 
-  /// Book a slot. Returns the new booking id, or null on failure.
+  /// Book a slot using the Atomic Counter logic.
   Future<String?> bookSlot({
     required String stationId,
     required String stationName,
@@ -104,25 +90,9 @@ class StationBookingProvider extends ChangeNotifier {
     required String userEmail,
     required DateTime start,
     required DateTime end,
+    required int portsTotal,
   }) async {
-    if (isSlotTaken(start, end)) {
-      _error = 'That slot was just taken. Pick another.';
-      notifyListeners();
-      return null;
-    }
-    final conflict = await _service.findConflict(
-      stationId: stationId,
-      start: start,
-      end: end,
-    );
-    if (conflict != null) {
-      _error = 'That slot was just taken. Pick another.';
-      notifyListeners();
-      await loadForStationOnDay(stationId, _selectedDay);
-      return null;
-    }
-
-    final id = await _service.createBooking(
+    final id = await _service.createBookingTransaction(
       stationId: stationId,
       stationName: stationName,
       userId: userId,
@@ -130,10 +100,16 @@ class StationBookingProvider extends ChangeNotifier {
       start: start,
       end: end,
     );
+
+    if (id == 'FULL') {
+      _error = 'That slot was just fully booked. Pick another.';
+      notifyListeners();
+      return null;
+    }
+
     if (id != null) {
       await loadForStationOnDay(stationId, _selectedDay);
       await loadMyBookings(userId);
-      // Also refresh the Busy flag since we may now be inside an active slot.
       await refreshBusyStations();
     } else {
       _error = 'Could not create booking. Try again.';
@@ -151,7 +127,6 @@ class StationBookingProvider extends ChangeNotifier {
     return ok;
   }
 
-  /// Client-side expiry sweep (no Cloud Function needed).
   Future<void> expireStaleBookings(String userId) async {
     await _service.expireStaleBookingsForUser(userId);
     await loadMyBookings(userId);
