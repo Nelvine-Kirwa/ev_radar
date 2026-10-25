@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AuthTextField(
                       controller: _emailController,
                       label: 'Email',
-                      hint: 'driver@evradar.app',
+                      hint: 'nelvine@gmail.com',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
